@@ -6,7 +6,6 @@ extern crate serde_derive;
 extern crate structopt;
 
 use structopt::StructOpt;
-mod action;
 mod wikibase;
 extern crate pretty_env_logger;
 #[macro_use]

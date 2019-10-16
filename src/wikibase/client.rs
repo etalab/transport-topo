@@ -1,6 +1,6 @@
 //mod structures;
 
-use super::structures::*;
+use super::api_structures::*;
 use failure::Error;
 use gtfs_structures;
 use json::{array, object};

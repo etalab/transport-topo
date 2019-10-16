@@ -1,6 +1,6 @@
 pub mod client;
 pub mod sparql_client;
-pub mod structures;
+pub mod api_structures;
 use failure::Error;
 use gtfs_structures;
 use std::io::Read;
