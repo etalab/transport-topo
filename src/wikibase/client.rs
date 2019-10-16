@@ -11,15 +11,15 @@ pub struct Client {
     token: Option<String>,
 }
 
-pub fn new(config: super::Config) -> Client {
-    Client {
-        client: reqwest::Client::new(),
-        config,
-        token: None,
-    }
-}
-
 impl Client {
+    pub fn new(config: crate::wikibase::Config) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            config,
+            token: None,
+        }
+    }
+
     fn get(&self) -> reqwest::RequestBuilder {
         self.client
             .get(&self.config.api_endpoint)

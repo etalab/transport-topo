@@ -40,7 +40,7 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    let mut client = wikibase::new(&opt.config).unwrap();
+    let mut client = wikibase::Client::new(&opt.config).unwrap();
 
     if opt.producer.starts_with('Q') {
         info!("Searching the producer by id");

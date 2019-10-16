@@ -8,14 +8,13 @@ pub struct Client {
     config: super::Config,
 }
 
-pub fn new(config: super::Config) -> Client {
-    Client {
-        client: reqwest::Client::new(),
-        config,
-    }
-}
-
 impl Client {
+    pub fn new(config: super::Config) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            config,
+        }
+    }
     fn query(&self, query: &str) -> Result<json::JsonValue, Error> {
         debug!("Sparql query: {}", query);
         let response = self
