@@ -1,6 +1,6 @@
+pub mod api_structures;
 pub mod client;
 pub mod sparql_client;
-pub mod structures;
 use failure::Error;
 use gtfs_structures;
 use std::io::Read;
@@ -46,19 +46,18 @@ impl Config {
     }
 }
 
-pub fn new(config_file: &str) -> Result<Client, Error> {
-    let mut f = std::fs::File::open(config_file)?;
-    let mut content = String::new();
-    f.read_to_string(&mut content)?;
-    let config = toml::from_str::<Config>(&content)?;
-
-    Ok(Client {
-        api: client::new(config.clone()),
-        sparql: sparql_client::new(config),
-    })
-}
-
 impl Client {
+    pub fn new<P: AsRef<std::path::Path>>(config_file: P) -> Result<Self, Error> {
+        let mut f = std::fs::File::open(config_file)?;
+        let mut content = String::new();
+        f.read_to_string(&mut content)?;
+        let config = toml::from_str::<Config>(&content)?;
+
+        Ok(Self {
+            api: client::Client::new(config.clone()),
+            sparql: sparql_client::Client::new(config),
+        })
+    }
     pub fn import_lines(
         &mut self,
         gtfs_filename: &str,
