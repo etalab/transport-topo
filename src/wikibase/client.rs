@@ -1,9 +1,14 @@
 //mod structures;
 
 use super::api_structures::*;
-use failure::Error;
+use failure::{format_err, Error};
 use gtfs_structures;
-use json::{array, object};
+use json::object;
+
+enum ObjectType {
+    Item,
+    Property,
+}
 
 pub struct Client {
     client: reqwest::Client,
@@ -56,6 +61,68 @@ impl Client {
         }
     }
 
+    fn create_object(
+        &mut self,
+        object_type: ObjectType,
+        label: &str,
+        extra_claims: &[json::JsonValue],
+    ) -> Result<String, Error> {
+        let new_type = match object_type {
+            ObjectType::Item => "item",
+            ObjectType::Property => "property",
+        };
+
+        let labels = object! {
+            "en" => object!{
+                "language" => "en",
+                "value" => label
+            }
+        };
+
+        let claims = json::stringify(match object_type {
+            ObjectType::Property => object! {
+                "labels" => labels,
+                "datatype" => "string",
+            },
+            ObjectType::Item => object! {
+                "labels" => labels,
+                "claims" => json::Array::from(extra_claims),
+            },
+        });
+
+        log::trace!("claims: {}", claims);
+        let mut res = self
+            .client
+            .post(&self.config.api_endpoint)
+            .query(&[
+                ("action", "wbeditentity"),
+                ("new", new_type),
+                ("format", "json"),
+            ])
+            .form(&[("token", self.get_token()?), ("data", claims)])
+            .send()?;
+
+        log::trace!("Response headers: {:#?}", res);
+        let body = res.text()?;
+        log::trace!("Response body: {:#?}", body);
+        let res = serde_json::from_str::<ApiResponse>(&body)?;
+        match res.content {
+            ApiResponseContent::Entity(entity) => Ok(entity.id),
+            ApiResponseContent::Error(err) => {
+                log::warn!("Error inserting: {:#?}", err);
+                Err(format_err!("Error while inserting: {}", err.info))
+            }
+        }
+    }
+
+    pub fn create_property(
+        &mut self,
+        label: &str,
+        extra_claims: &[json::JsonValue],
+    ) -> Result<String, Error> {
+        self.create_object(ObjectType::Property, label, extra_claims)
+    }
+
     pub fn insert_route(
         &mut self,
         producer: &str,
@@ -67,37 +134,23 @@ impl Client {
         } else {
             route.short_name.as_str()
         };
-        let claims = object! {
-            "labels" => object!{
-                "en" => object!{
-                    "language" => "en",
-                    "value" => format!("{} – ({})", route_name, producer_name)
-                }
-            },
-            "claims" => array![
-                claim_item(&self.config.properties.instance_of, self.config.items.line),
-                claim_string(&self.config.properties.gtfs_id, &route.id), // has <gtfs id>
-                claim_item(&self.config.properties.produced_by, producer.trim_start_matches('Q').parse()?), // <produced by>
-                claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
-                claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
-                claim_item(&self.config.properties.physical_mode, self.config.physical_mode(route)) // has <physical mode> <bus>
-        ]};
+        let label = format!("{} – ({})", route_name, producer_name);
+        let claims = [
+            claim_item(&self.config.properties.instance_of, self.config.items.line),
+            claim_string(&self.config.properties.gtfs_id, &route.id),
+            claim_item(
+                &self.config.properties.produced_by,
+                producer.trim_start_matches('Q').parse()?,
+            ),
+            claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
+            claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
+            claim_item(
+                &self.config.properties.physical_mode,
+                self.config.physical_mode(route),
+            ),
+        ];
 
-        let res = self
-            .client
-            .post(&self.config.api_endpoint)
-            .query(&[
-                ("action", "wbeditentity"),
-                ("new", "item"),
-                ("format", "json"),
-            ])
-            .form(&[
-                ("token", self.get_token()?),
-                ("data", json::stringify(claims)),
-            ])
-            .send()?
-            .json::<InsertResponse>()?;
-        Ok(res.entity.id)
+        self.create_object(ObjectType::Item, &label, &claims)
     }
 }
 

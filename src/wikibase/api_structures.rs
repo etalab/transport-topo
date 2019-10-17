@@ -66,11 +66,32 @@ pub struct TokenResponse {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct InsertResponse {
-    pub entity: InsertEntity,
+pub struct ApiResponse {
+    #[serde(flatten)]
+    pub content: ApiResponseContent,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ApiResponseContent {
+    Entity(InsertEntity),
+    Error(Error),
 }
 
 #[derive(Deserialize, Debug)]
 pub struct InsertEntity {
     pub id: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Error {
+    pub code: String,
+    pub info: String,
+    pub messages: Vec<Message>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Message {
+    pub name: String,
+    pub parameters: Vec<String>,
 }
