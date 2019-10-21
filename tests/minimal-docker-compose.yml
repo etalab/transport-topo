@@ -1,0 +1,68 @@
+# TODO explain this docker-compose
+version: '3'
+
+services:
+  wikibase:
+    image: wikibase/wikibase:1.33-bundle
+    links:
+      - mysql
+    ports:
+     - "8123:80" # TODO: remove this binding, but since the container is restarted during startup it's not trivial
+    depends_on:
+    - mysql
+    - elasticsearch
+    restart: on-failure
+    environment:
+      - DB_SERVER=mysql:3306
+      - MW_ELASTIC_HOST=elasticsearch
+      - MW_ELASTIC_PORT=9200
+      # CONFIG - Change the default values below
+      - MW_ADMIN_NAME=WikibaseAdmin
+      - MW_ADMIN_PASS=WikibaseDockerAdminPass
+      - MW_ADMIN_EMAIL=admin@example.com
+      - MW_WG_SECRET_KEY=secretkey
+      # CONFIG - Change the default values below (should match mysql values in this file)
+      - DB_USER=wikiuser
+      - DB_PASS=sqlpass
+      - DB_NAME=my_wiki
+      - QS_PUBLIC_SCHEME_HOST_AND_PORT=http://localhost:9191
+  mysql:
+    image: mariadb:10.3
+    restart: always
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      # CONFIG - Change the default values below (should match values passed to wikibase)
+      MYSQL_DATABASE: 'my_wiki'
+      MYSQL_USER: 'wikiuser'
+      MYSQL_PASSWORD: 'sqlpass'
+  wdqs-frontend:
+    image: wikibase/wdqs-frontend:latest
+    ports:
+     - 80
+    depends_on:
+    - wdqs-proxy
+    environment:
+      - WIKIBASE_HOST=wikibase
+      - WDQS_HOST=wdqs-proxy
+  wdqs:
+    image: wikibase/wdqs:0.3.2
+    command: /runBlazegraph.sh
+    environment:
+      - WIKIBASE_HOST=wikibase
+      - WDQS_HOST=wdqs
+      - WDQS_PORT=9999
+    expose:
+      - 9999
+  wdqs-proxy:
+    image: wikibase/wdqs-proxy
+    environment:
+      - PROXY_PASS_HOST=wdqs:9999
+    ports:
+      - 80
+    depends_on:
+    - wdqs
+  elasticsearch:
+    image: wikibase/elasticsearch:5.6.14-extra
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"

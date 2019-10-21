@@ -46,17 +46,21 @@ impl Config {
 }
 
 impl Client {
-    pub fn new<P: AsRef<std::path::Path>>(config_file: P) -> Result<Self, Error> {
+    pub fn from_config_file<P: AsRef<std::path::Path>>(config_file: P) -> Result<Self, Error> {
         let mut f = std::fs::File::open(config_file)?;
         let mut content = String::new();
         f.read_to_string(&mut content)?;
         let config = toml::from_str::<Config>(&content)?;
+        Self::new(config)
+    }
 
+    pub fn new(config: Config) -> Result<Self, Error> {
         Ok(Self {
             api: ApiClient::new(config.clone())?,
             sparql: SparqlClient::new(config),
         })
     }
+
     pub fn import_lines(
         &mut self,
         gtfs_filename: &str,
