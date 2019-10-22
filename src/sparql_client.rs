@@ -2,15 +2,16 @@ use failure::Error;
 use itertools::Itertools;
 use json;
 use std::collections::HashMap;
+use log::{debug, trace};
 
-pub struct Client {
+pub struct SparqlClient {
     client: reqwest::Client,
-    config: super::Config,
+    config: crate::client::Config,
 }
 
-impl Client {
-    pub fn new(config: super::Config) -> Self {
-        Self {
+impl SparqlClient {
+    pub fn new(config: crate::client::Config) -> Self {
+        SparqlClient {
             client: reqwest::Client::new(),
             config,
         }

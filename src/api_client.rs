@@ -1,8 +1,5 @@
-//mod structures;
-
-use super::api_structures::*;
+use crate::api_structures::*;
 use failure::{format_err, Error};
-use gtfs_structures;
 use json::object;
 
 enum ObjectType {
@@ -10,15 +7,15 @@ enum ObjectType {
     Property,
 }
 
-pub struct Client {
+pub struct ApiClient {
     client: reqwest::Client,
-    config: super::Config,
+    config: crate::client::Config,
     token: Option<String>,
 }
 
-impl Client {
-    pub fn new(config: crate::wikibase::Config) -> Self {
-        Self {
+impl ApiClient {
+    pub fn new(config: crate::client::Config) -> Self {
+        ApiClient {
             client: reqwest::Client::new(),
             config,
             token: None,

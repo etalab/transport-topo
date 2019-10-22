@@ -1,20 +1,20 @@
-pub mod api_structures;
-pub mod client;
-pub mod sparql_client;
-use failure::Error;
-use gtfs_structures;
-use std::io::Read;
-use toml;
 
-#[derive(Deserialize, Debug, Clone)]
+use failure::Error;
+use std::io::Read;
+use crate::api_client::ApiClient;
+use crate::sparql_client::SparqlClient;
+use serde::Deserialize;
+use log::{info, warn, error};
+
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
     pub api_endpoint: String,
     pub sparql_endpoint: String,
-    properties: Properties,
-    items: Items,
+    pub properties: Properties,
+    pub items: Items,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct Properties {
     pub produced_by: String,
     pub instance_of: String,
@@ -24,7 +24,7 @@ pub struct Properties {
     pub gtfs_id: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct Items {
     pub line: u64,
     pub producer: u64,
@@ -32,8 +32,8 @@ pub struct Items {
 }
 
 pub struct Client {
-    pub api: client::Client,
-    pub sparql: sparql_client::Client,
+    pub api: ApiClient,
+    pub sparql: SparqlClient,
 }
 
 impl Config {
@@ -54,8 +54,8 @@ impl Client {
         let config = toml::from_str::<Config>(&content)?;
 
         Ok(Self {
-            api: client::Client::new(config.clone()),
-            sparql: sparql_client::Client::new(config),
+            api: ApiClient::new(config.clone()),
+            sparql: SparqlClient::new(config),
         })
     }
     pub fn import_lines(
