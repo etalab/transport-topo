@@ -26,4 +26,4 @@ Identifiers of entities can be the same across different producers. That is why 
 
 For instance, to import all the lines of the producer `Q4` from the local file `gtfs.zip`, run:
 
-    cargo run --release -- -p Q4 -i gtfs.zip
+    cargo run --release --bin import_lines -- -p Q4 -i gtfs.zip
