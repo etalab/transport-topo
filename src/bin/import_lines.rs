@@ -1,5 +1,5 @@
+use log::{debug, error, info, warn};
 use structopt::StructOpt;
-use log::{info, warn, error, debug};
 use transitwiki::Client;
 
 #[derive(StructOpt, Debug)]

@@ -1,7 +1,7 @@
-mod api_structures;
 mod api_client;
-mod sparql_client;
-pub mod database_initializer;
+mod api_structures;
 pub mod client;
+pub mod database_initializer;
+mod sparql_client;
 
 pub use client::Client;

@@ -19,6 +19,6 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    transitwiki::database_initializer::initial_populate(&opt.api, &opt.sparql).expect("impossible to populate wikibase");
-
+    transitwiki::database_initializer::initial_populate(&opt.api, &opt.sparql, true)
+        .expect("impossible to populate wikibase");
 }
