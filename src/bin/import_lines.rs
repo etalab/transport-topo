@@ -1,15 +1,6 @@
-extern crate failure;
-extern crate gtfs_structures;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate structopt;
-
 use structopt::StructOpt;
-mod wikibase;
-extern crate pretty_env_logger;
-#[macro_use]
-extern crate log;
+use log::{info, warn, error, debug};
+use transitwiki::Client;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
@@ -40,7 +31,7 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    let mut client = wikibase::Client::new(&opt.config).unwrap();
+    let mut client = Client::new(&opt.config).unwrap();
 
     if opt.producer.starts_with('Q') {
         info!("Searching the producer by id");
