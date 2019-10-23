@@ -3,18 +3,22 @@ use json::object;
 use regex::Regex;
 use thiserror::Error;
 
+const WIKIBASE_LABEL_CONFLICT: &'static str = "wikibase-validator-label-conflict";
+
 lazy_static::lazy_static! {
     // the message in the api response is in the form "[[Property:P1|P1]]"
     // and in this example we want to extract "P1"
-    static ref LABEL_CONFLIT_REGEX: Regex = Regex::new(r#"\[\[.+\|(.+)\]\]"#).unwrap();
+    static ref LABEL_CONFLICT_REGEX: Regex = Regex::new(r#"\[\[.+\|(.+)\]\]"#).unwrap();
 }
 
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("{label} already exists, id = {id}")]
-    AlreadyExists { label: String, id: String },
+    PropertyAlreadyExists { label: String, id: String },
     #[error("{0} is not a valid producer id")]
     InvalidProducer(String),
+    #[error("Several items with label {0}")]
+    TooManyItems(String),
     #[error("error: {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("error: {0}")]
@@ -55,7 +59,8 @@ impl ApiClient {
             .query(&[("format", "json")])
     }
 
-    pub fn find_entity(&self, label: &str) -> Result<Vec<SearchResultItem>, ApiError> {
+    /// search for all entities for a given english label
+    pub fn find_entities(&self, label: &str) -> Result<Vec<SearchResultItem>, ApiError> {
         let res = self
             .get()
             .query(&[
@@ -68,6 +73,17 @@ impl ApiClient {
             .json::<SearchResponse>()?;
 
         Ok(res.search)
+    }
+
+    /// search for an entity by it's english label, and return it if it is uniq
+    /// if multiple items match, return an error
+    pub fn find_entity_id(&self, label: &str) -> Result<Option<String>, ApiError> {
+        self.find_entities(label)
+            .and_then(|entries| match entries.as_slice() {
+                [] => Ok(None),
+                [e] => Ok(Some(e.id.clone())),
+                _ => Err(ApiError::TooManyItems(label.to_owned())),
+            })
     }
 
     fn create_object(
@@ -121,7 +137,7 @@ impl ApiClient {
                 if let Some(message) = err
                     .messages
                     .iter()
-                    .find(|m| m.name == "wikibase-validator-label-conflict")
+                    .find(|m| m.name == WIKIBASE_LABEL_CONFLICT)
                 {
                     // it seems to be the way to check that the write was rejected
                     // because something has already this label
@@ -129,13 +145,13 @@ impl ApiClient {
                     // there does not seems to be a better way to parse the badly organised response
 
                     let existing_id = message.parameters.last().and_then(|p| {
-                        LABEL_CONFLIT_REGEX
+                        LABEL_CONFLICT_REGEX
                             .captures(p)
                             .and_then(|r| r.get(1))
                             .map(|c| c.as_str())
                     });
                     if let Some(existing_id) = existing_id {
-                        Err(ApiError::AlreadyExists {
+                        Err(ApiError::PropertyAlreadyExists {
                             label: label.to_owned(),
                             id: existing_id.to_owned(),
                         })

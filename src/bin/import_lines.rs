@@ -61,21 +61,9 @@ fn main() {
         }
     } else {
         info!("Searching the producer by name");
-        match client.api.find_entity(&opt.producer) {
-            Ok(results) => {
-                if results.is_empty() {
-                    warn!("We found no producer with the name {}", opt.producer)
-                } else {
-                    info!("The following itmes match the search");
-                    for result in results {
-                        info!(
-                            "{} ({})",
-                            result.label,
-                            ansi_term::Colour::Blue.paint(result.id)
-                        )
-                    }
-                }
-            }
+        match client.api.find_entity_id(&opt.producer) {
+            Ok(None) => warn!("We found no producer with the name {}", opt.producer),
+            Ok(Some(id)) => info!("The following item match the search {}", id),
             Err(error) => error!("Could not find the entity by name: {}", error),
         }
     }

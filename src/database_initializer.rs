@@ -8,23 +8,29 @@ fn get_or_create_item(
     label: &str,
     claims: &[json::JsonValue],
 ) -> Result<u64, Error> {
-    let r = client.create_item(label, claims);
-    let id = if let Err(ApiError::AlreadyExists { label, id }) = r {
-        log::info!("object \"{}\" already exists with id {}", label, id);
+    // for an item, we need to do a separate query to check if the item is already there
+    let id = if let Some(id) = client.find_entity_id(label)? {
+        log::info!("item \"{}\" already exists with id {}", label, id);
         id
     } else {
-        r?
+        let id = client.create_item(label, claims)?;
+        log::info!("creating item \"{}\" with id {}", label, id);
+        id
     };
     Ok(id.trim_start_matches('Q').parse()?)
 }
 
 fn get_or_create_property(client: &ApiClient, label: &str) -> Result<String, Error> {
+    // 2 properties cannot have the same label, so we just try to insert it
+    // and get the id of the conflicting property if present
     let r = client.create_property(label, &[]);
-    if let Err(ApiError::AlreadyExists { label, id }) = r {
-        log::info!("object \"{}\" already exists with id {}", label, id);
+    if let Err(ApiError::PropertyAlreadyExists { label, id }) = r {
+        log::info!("property \"{}\" already exists with id {}", label, id);
         Ok(id)
     } else {
-        Ok(r?)
+        let id = r?;
+        log::info!("creating property \"{}\" with id {}", label, id);
+        Ok(id)
     }
 }
 
@@ -60,11 +66,11 @@ pub fn initial_populate(
     };
     if default_producer {
         // we create a default producer, useful for tests purposes
-        let r = client.create_item(
+        get_or_create_item(
+            &client,
             "bob the bus mapper",
             &[claim_string(&instance_of, &format!("Q{}", producer_class))],
         )?;
-        log::info!("producer created: {:?}", r);
     }
     Ok(config)
 }
