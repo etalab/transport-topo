@@ -10,16 +10,22 @@ enum ObjectType {
 pub struct ApiClient {
     client: reqwest::Client,
     config: crate::client::Config,
-    token: Option<String>,
+    token: String,
 }
 
 impl ApiClient {
-    pub fn new(config: crate::client::Config) -> Self {
-        ApiClient {
-            client: reqwest::Client::new(),
+    pub fn new(config: crate::client::Config) -> Result<Self, Error> {
+        let client = reqwest::Client::new();
+        let res = client
+            .get(&config.api_endpoint)
+            .query(&[("format", "json"),("action", "query"), ("meta", "tokens")])
+                .send()?
+                .json::<TokenResponse>()?;
+        Ok(ApiClient {
+            client,
             config,
-            token: None,
-        }
+            token: res.query.tokens.csrftoken,
+        })
     }
 
     fn get(&self) -> reqwest::RequestBuilder {
@@ -43,23 +49,8 @@ impl ApiClient {
         Ok(res.search)
     }
 
-    pub fn get_token(&mut self) -> Result<String, Error> {
-        if let Some(token) = &self.token {
-            Ok(token.to_string())
-        } else {
-            let res = self
-                .get()
-                .query(&[("action", "query"), ("meta", "tokens")])
-                .send()?
-                .json::<TokenResponse>()?;
-            let token = res.query.tokens.csrftoken;
-            self.token = Some(token.clone());
-            Ok(token)
-        }
-    }
-
     fn create_object(
-        &mut self,
+        &self,
         object_type: ObjectType,
         label: &str,
         extra_claims: &[json::JsonValue],
@@ -96,7 +87,7 @@ impl ApiClient {
                 ("new", new_type),
                 ("format", "json"),
             ])
-            .form(&[("token", self.get_token()?), ("data", claims)])
+            .form(&[("token", &self.token), ("data", &claims)])
             .send()?;
 
         log::trace!("Response headers: {:#?}", res);
@@ -113,7 +104,7 @@ impl ApiClient {
     }
 
     pub fn create_property(
-        &mut self,
+        &self,
         label: &str,
         extra_claims: &[json::JsonValue],
     ) -> Result<String, Error> {
@@ -121,7 +112,7 @@ impl ApiClient {
     }
 
     pub fn insert_route(
-        &mut self,
+        &self,
         producer: &str,
         producer_name: &str,
         route: &gtfs_structures::Route,
