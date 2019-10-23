@@ -2,11 +2,11 @@ use crate::client::{Config, Properties, Items};
 use failure::Error;
 
 pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<Config, Error> {
-    let mut client = crate::api_client::ApiClient::new(Config {
+    let client = crate::api_client::ApiClient::new(Config {
         api_endpoint: api_endpoint.to_owned(),
         sparql_endpoint: sparql_endpoint.to_owned(),
         ..Default::default()
-    });
+    })?;
     Ok(Config {
         api_endpoint: api_endpoint.to_owned(),
         sparql_endpoint: sparql_endpoint.to_owned(),

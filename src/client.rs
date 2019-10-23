@@ -54,7 +54,7 @@ impl Client {
         let config = toml::from_str::<Config>(&content)?;
 
         Ok(Self {
-            api: ApiClient::new(config.clone()),
+            api: ApiClient::new(config.clone())?,
             sparql: SparqlClient::new(config),
         })
     }
