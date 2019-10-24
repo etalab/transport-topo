@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Error;
 use itertools::Itertools;
 use json;
 use log::{debug, trace};

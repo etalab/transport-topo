@@ -1,6 +1,6 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
-use failure::Error;
+use anyhow::Error;
 use log::{error, info, warn};
 use serde::Deserialize;
 use std::io::Read;
@@ -66,9 +66,9 @@ impl Client {
         gtfs_filename: &str,
         producer_id: &str,
         producer_name: &str,
-    ) -> Result<(), failure::Error> {
-        let gtfs = gtfs_structures::RawGtfs::from_zip(gtfs_filename)?;
-        let routes = gtfs.routes?;
+    ) -> Result<(), anyhow::Error> {
+        let gtfs = gtfs_structures::RawGtfs::from_zip(gtfs_filename).map_err(|e| e.compat())?;
+        let routes = gtfs.routes.map_err(|e| e.compat())?;
 
         for route in routes {
             let r = self.sparql.find_line(producer_id, &route.id)?;
