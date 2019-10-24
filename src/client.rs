@@ -1,10 +1,9 @@
-
-use failure::Error;
-use std::io::Read;
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
+use failure::Error;
+use log::{error, info, warn};
 use serde::Deserialize;
-use log::{info, warn, error};
+use std::io::Read;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {

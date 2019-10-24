@@ -1,6 +1,31 @@
 use crate::api_structures::*;
-use failure::{format_err, Error};
 use json::object;
+use regex::Regex;
+use thiserror::Error;
+
+const WIKIBASE_LABEL_CONFLICT: &'static str = "wikibase-validator-label-conflict";
+
+lazy_static::lazy_static! {
+    // the message in the api response is in the form "[[Property:P1|P1]]"
+    // and in this example we want to extract "P1"
+    static ref LABEL_CONFLICT_REGEX: Regex = Regex::new(r#"\[\[.+\|(.+)\]\]"#).unwrap();
+}
+
+#[derive(Debug, Error)]
+pub enum ApiError {
+    #[error("{label} already exists, id = {id}")]
+    PropertyAlreadyExists { label: String, id: String },
+    #[error("{0} is not a valid producer id")]
+    InvalidProducer(String),
+    #[error("Several items with label {0}")]
+    TooManyItems(String),
+    #[error("error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("error: {0}")]
+    InvalidJsonError(#[from] serde_json::Error),
+    #[error("error: {0}")]
+    GenericError(String),
+}
 
 enum ObjectType {
     Item,
@@ -14,13 +39,13 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
-    pub fn new(config: crate::client::Config) -> Result<Self, Error> {
+    pub fn new(config: crate::client::Config) -> Result<Self, ApiError> {
         let client = reqwest::Client::new();
         let res = client
             .get(&config.api_endpoint)
-            .query(&[("format", "json"),("action", "query"), ("meta", "tokens")])
-                .send()?
-                .json::<TokenResponse>()?;
+            .query(&[("format", "json"), ("action", "query"), ("meta", "tokens")])
+            .send()?
+            .json::<TokenResponse>()?;
         Ok(ApiClient {
             client,
             config,
@@ -34,7 +59,8 @@ impl ApiClient {
             .query(&[("format", "json")])
     }
 
-    pub fn find_entity(&self, label: &str) -> Result<Vec<SearchResultItem>, Error> {
+    /// search for all entities for a given english label
+    pub fn find_entities(&self, label: &str) -> Result<Vec<SearchResultItem>, ApiError> {
         let res = self
             .get()
             .query(&[
@@ -49,12 +75,23 @@ impl ApiClient {
         Ok(res.search)
     }
 
+    /// search for an entity by it's english label, and return it if it is uniq
+    /// if multiple items match, return an error
+    pub fn find_entity_id(&self, label: &str) -> Result<Option<String>, ApiError> {
+        self.find_entities(label)
+            .and_then(|entries| match entries.as_slice() {
+                [] => Ok(None),
+                [e] => Ok(Some(e.id.clone())),
+                _ => Err(ApiError::TooManyItems(label.to_owned())),
+            })
+    }
+
     fn create_object(
         &self,
         object_type: ObjectType,
         label: &str,
         extra_claims: &[json::JsonValue],
-    ) -> Result<String, Error> {
+    ) -> Result<String, ApiError> {
         let new_type = match object_type {
             ObjectType::Item => "item",
             ObjectType::Property => "property",
@@ -97,8 +134,42 @@ impl ApiClient {
         match res.content {
             ApiResponseContent::Entity(entity) => Ok(entity.id),
             ApiResponseContent::Error(err) => {
-                log::warn!("Error inserting: {:#?}", err);
-                Err(format_err!("Error while inserting: {}", err.info))
+                if let Some(message) = err
+                    .messages
+                    .iter()
+                    .find(|m| m.name == WIKIBASE_LABEL_CONFLICT)
+                {
+                    // it seems to be the way to check that the write was rejected
+                    // because something has already this label
+                    // To get the id of the existing object,
+                    // there does not seems to be a better way to parse the badly organised response
+
+                    let existing_id = message.parameters.last().and_then(|p| {
+                        LABEL_CONFLICT_REGEX
+                            .captures(p)
+                            .and_then(|r| r.get(1))
+                            .map(|c| c.as_str())
+                    });
+                    if let Some(existing_id) = existing_id {
+                        Err(ApiError::PropertyAlreadyExists {
+                            label: label.to_owned(),
+                            id: existing_id.to_owned(),
+                        })
+                    } else {
+                        // we were not able to get the existing id, falling back to a generic error
+                        log::warn!("impossible to parse conflict message: {:#?}", message);
+                        Err(ApiError::GenericError(format!(
+                            "conflict while inserting: {}",
+                            err.info
+                        )))
+                    }
+                } else {
+                    log::warn!("Error inserting: {:#?}", err);
+                    Err(ApiError::GenericError(format!(
+                        "Error while inserting: {}",
+                        err.info
+                    )))
+                }
             }
         }
     }
@@ -107,8 +178,16 @@ impl ApiClient {
         &self,
         label: &str,
         extra_claims: &[json::JsonValue],
-    ) -> Result<String, Error> {
+    ) -> Result<String, ApiError> {
         self.create_object(ObjectType::Property, label, extra_claims)
+    }
+
+    pub fn create_item(
+        &self,
+        label: &str,
+        extra_claims: &[json::JsonValue],
+    ) -> Result<String, ApiError> {
+        self.create_object(ObjectType::Item, label, extra_claims)
     }
 
     pub fn insert_route(
@@ -116,7 +195,7 @@ impl ApiClient {
         producer: &str,
         producer_name: &str,
         route: &gtfs_structures::Route,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ApiError> {
         let route_name = if !route.long_name.is_empty() {
             route.long_name.as_str()
         } else {
@@ -128,7 +207,10 @@ impl ApiClient {
             claim_string(&self.config.properties.gtfs_id, &route.id),
             claim_item(
                 &self.config.properties.produced_by,
-                producer.trim_start_matches('Q').parse()?,
+                producer
+                    .trim_start_matches('Q')
+                    .parse()
+                    .map_err(|_| ApiError::InvalidProducer(producer.to_owned()))?,
             ),
             claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
             claim_string(&self.config.properties.gtfs_long_name, &route.long_name),

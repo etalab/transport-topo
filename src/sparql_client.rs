@@ -1,8 +1,8 @@
 use failure::Error;
 use itertools::Itertools;
 use json;
-use std::collections::HashMap;
 use log::{debug, trace};
+use std::collections::HashMap;
 
 pub struct SparqlClient {
     client: reqwest::Client,
