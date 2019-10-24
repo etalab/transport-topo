@@ -31,7 +31,7 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    let mut client = Client::new(&opt.config).unwrap();
+    let mut client = Client::from_config_file(&opt.config).unwrap();
 
     if opt.producer.starts_with('Q') {
         info!("Searching the producer by id");
