@@ -3,7 +3,7 @@ use json::object;
 use regex::Regex;
 use thiserror::Error;
 
-const WIKIBASE_LABEL_CONFLICT: &'static str = "wikibase-validator-label-conflict";
+const WIKIBASE_LABEL_CONFLICT: &str = "wikibase-validator-label-conflict";
 
 lazy_static::lazy_static! {
     // the message in the api response is in the form "[[Property:P1|P1]]"
