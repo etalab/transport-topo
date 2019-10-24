@@ -215,10 +215,7 @@ impl ApiClient {
         let claims = [
             claim_item(&self.config.properties.instance_of, &self.config.items.line),
             claim_string(&self.config.properties.gtfs_id, &route.id),
-            claim_item(
-                &self.config.properties.produced_by,
-                producer,
-            ),
+            claim_item(&self.config.properties.produced_by, producer),
             claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
             claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
             claim_item(

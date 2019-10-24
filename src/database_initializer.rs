@@ -1,5 +1,5 @@
 use crate::api_client::{
-    claim_string, claim_item, ApiClient, ApiError, ObjectType, PropertyDataType,
+    claim_item, claim_string, ApiClient, ApiError, ObjectType, PropertyDataType,
 };
 use crate::client::{Config, Items, Properties};
 use anyhow::Error;
@@ -66,18 +66,28 @@ pub fn initial_populate(
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
 
     let producer_class = get_or_create_item(&client, "producer", &[], topo_id.as_str())?;
-    let instance_of = get_or_create_property(&client, "instance of", PropertyDataType::Item, topo_id.as_str())?;
+    let instance_of = get_or_create_property(
+        &client,
+        "instance of",
+        PropertyDataType::Item,
+        topo_id.as_str(),
+    )?;
     let config = Config {
         api_endpoint: api_endpoint.to_owned(),
         sparql_endpoint: sparql_endpoint.to_owned(),
         properties: Properties {
-            produced_by: get_or_create_property(&client, "Produced by", PropertyDataType::String, topo_id.as_str())?,
+            produced_by: get_or_create_property(
+                &client,
+                "Produced by",
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
             instance_of: instance_of.clone(),
             physical_mode: get_or_create_property(
                 &client,
                 "Physical mode",
                 PropertyDataType::String,
-                topo_id.as_str()
+                topo_id.as_str(),
             )?,
             gtfs_short_name: get_or_create_property(
                 &client,
@@ -91,10 +101,15 @@ pub fn initial_populate(
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
-            gtfs_id: get_or_create_property(&client, "GTFS id", PropertyDataType::String, topo_id.as_str())?,
+            gtfs_id: get_or_create_property(
+                &client,
+                "GTFS id",
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
         },
         items: Items {
-            line: get_or_create_item(&client, "line", &[],topo_id.as_str())?,
+            line: get_or_create_item(&client, "line", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
             bus: get_or_create_item(&client, "bus", &[], topo_id.as_str())?,
         },
