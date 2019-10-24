@@ -25,9 +25,9 @@ pub struct Properties {
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Items {
-    pub line: u64,
-    pub producer: u64,
-    pub bus: u64,
+    pub line: String,
+    pub producer: String,
+    pub bus: String,
 }
 
 pub struct Client {
@@ -36,11 +36,11 @@ pub struct Client {
 }
 
 impl Config {
-    pub fn physical_mode(&self, route: &gtfs_structures::Route) -> u64 {
+    pub fn physical_mode(&self, route: &gtfs_structures::Route) -> &str {
         use gtfs_structures::RouteType::*;
         match route.route_type {
-            Bus => self.items.bus,
-            _ => 6,
+            Bus => &self.items.bus,
+            _ => &self.items.bus,
         }
     }
 }

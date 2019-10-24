@@ -1,13 +1,16 @@
-use crate::api_client::{claim_string, ApiClient, ApiError, ObjectType, PropertyDataType};
+use crate::api_client::{
+    claim_item, ApiClient, ApiError, ObjectType, PropertyDataType,
+};
 use crate::client::{Config, Items, Properties};
 use anyhow::Error;
+use inflector::Inflector;
 
 // insert item if not already there, and return its id
 fn get_or_create_item(
     client: &ApiClient,
     label: &str,
     claims: &[json::JsonValue],
-) -> Result<u64, Error> {
+) -> Result<String, Error> {
     // for an item, we need to do a separate query to check if the item is already there
     let id = if let Some(id) = client.find_entity_id(label)? {
         log::info!("item \"{}\" already exists with id {}", label, id);
@@ -78,7 +81,7 @@ pub fn initial_populate(
         },
         items: Items {
             line: get_or_create_item(&client, "line", &[])?,
-            producer: producer_class,
+            producer: producer_class.to_owned(),
             bus: get_or_create_item(&client, "bus", &[])?,
         },
     };
@@ -87,7 +90,7 @@ pub fn initial_populate(
         get_or_create_item(
             &client,
             "bob the bus mapper",
-            &[claim_string(&instance_of, &format!("Q{}", producer_class))],
+            &[claim_item(&instance_of, &producer_class)],
         )?;
     }
     Ok(config)

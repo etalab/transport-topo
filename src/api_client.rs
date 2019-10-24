@@ -213,14 +213,11 @@ impl ApiClient {
         };
         let label = format!("{} – ({})", route_name, producer_name);
         let claims = [
-            claim_item(&self.config.properties.instance_of, self.config.items.line),
+            claim_item(&self.config.properties.instance_of, &self.config.items.line),
             claim_string(&self.config.properties.gtfs_id, &route.id),
             claim_item(
                 &self.config.properties.produced_by,
-                producer
-                    .trim_start_matches('Q')
-                    .parse()
-                    .map_err(|_| ApiError::InvalidProducer(producer.to_owned()))?,
+                producer,
             ),
             claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
             claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
@@ -249,11 +246,11 @@ pub fn claim_string(property: &str, value: &str) -> json::JsonValue {
     claim(property, object! { "value" => value, "type" => "string" })
 }
 
-pub fn claim_item(property: &str, id: u64) -> json::JsonValue {
+pub fn claim_item(property: &str, id: &str) -> json::JsonValue {
     claim(
         property,
         object! {
-            "value" => object!{ "entity-type" => "item", "numeric-id" => id },
+            "value" => object!{ "entity-type" => "item", "id" => id },
             "type" => "wikibase-entityid",
         },
     )

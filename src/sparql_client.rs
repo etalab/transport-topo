@@ -67,7 +67,7 @@ impl SparqlClient {
                 "gtfs_id",
             ],
             &format!(
-                "?line wdt:{instance_of} wd:Q{line}.
+                "?line wdt:{instance_of} wd:{line}.
     ?line wdt:{gtfs_id_prop} \"{gtfs_id}\".
     ?line wdt:{producer_prop} wd:{producer_id}.
     ?line wdt:{route_short_name} ?route_short_name.
@@ -91,7 +91,7 @@ impl SparqlClient {
         self.sparql(
             &["producer", "producerLabel"],
             &format!(
-                "?producer wdt:{instance_of} wd:Q{producer}.
+                "?producer wdt:{instance_of} wd:{producer}.
                 FILTER(?producer = wd:{producer_id})",
                 producer_id = producer_id,
                 instance_of = self.config.properties.instance_of,
