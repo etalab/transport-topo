@@ -84,7 +84,11 @@ impl ApiClient {
     }
 
     /// search for all entities for a given english label
-    pub fn find_entities(&self,  obj_type: ObjectType, label: &str) -> Result<Vec<SearchResultItem>, ApiError> {
+    pub fn find_entities(
+        &self,
+        label: &str,
+        obj_type: ObjectType,
+    ) -> Result<Vec<SearchResultItem>, ApiError> {
         let res = self
             .get()
             .query(&[
@@ -106,7 +110,7 @@ impl ApiClient {
         object_type: ObjectType,
         label: &str,
     ) -> Result<Option<String>, ApiError> {
-        self.find_entities(object_type, label)
+        self.find_entities(label, object_type)
             .and_then(|entries| match entries.as_slice() {
                 [] => Ok(None),
                 [e] => Ok(Some(e.id.clone())),

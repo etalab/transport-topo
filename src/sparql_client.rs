@@ -1,8 +1,19 @@
-use anyhow::Error;
 use itertools::Itertools;
-use json;
 use log::{debug, trace};
 use std::collections::HashMap;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum SparqlError {
+    #[error("No etities with topo id {0} found")]
+    TopoIdNotFound(String),
+    #[error("Several entities with topo id {0}")]
+    DuplicatedTopoId(String),
+    #[error("error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("error: {0}")]
+    InvalidJsonError(#[from] json::Error),
+}
 
 pub struct SparqlClient {
     client: reqwest::Client,
@@ -16,7 +27,7 @@ impl SparqlClient {
             config,
         }
     }
-    fn query(&self, query: &str) -> Result<json::JsonValue, Error> {
+    fn query(&self, query: &str) -> Result<json::JsonValue, SparqlError> {
         debug!("Sparql query: {}", query);
         let response = self
             .client
@@ -32,7 +43,7 @@ impl SparqlClient {
         &self,
         variables: &[&str],
         where_clause: &str,
-    ) -> Result<Vec<HashMap<String, String>>, Error> {
+    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
         let vars = variables.iter().format(" ");
         let query = format!("SELECT {} WHERE {{ {} SERVICE wikibase:label {{ bd:serviceParam wikibase:language \"en\". }} }}", vars, where_clause);
         let res = self.query(&query)?;
@@ -52,7 +63,7 @@ impl SparqlClient {
         &self,
         producer_id: &str,
         gtfs_id: &str,
-    ) -> Result<Vec<HashMap<String, String>>, Error> {
+    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
         trace!("Finding line {} of producer {}", gtfs_id, producer_id);
         self.sparql(
             &[
@@ -81,5 +92,23 @@ impl SparqlClient {
                 producer_id = producer_id
             ),
         )
+    }
+
+    /// Finds an entity id with a given topo_id
+    /// Will fail if no item or strictly more than one is returned
+    /// You must provide the id of the `topo tool id` property
+    pub fn find_entity_by_topo_id(&self, item_topo_id: &str, topo_id_id: &str)  -> Result<String, SparqlError> {
+        self.sparql(
+            &["item_id"],
+            &format!(
+                "?item_id wdt:{topo_id_id} '{item_topo_id}'",
+                topo_id_id = topo_id_id,
+                item_topo_id = item_topo_id
+            ),
+        ).and_then(|items| match items.as_slice(){
+            [] => Err(SparqlError::TopoIdNotFound(item_topo_id.to_string())),
+            [item] => Ok(item["item_id"].to_owned()),
+            _ => Err(SparqlError::DuplicatedTopoId(item_topo_id.to_string())),
+        })
     }
 }

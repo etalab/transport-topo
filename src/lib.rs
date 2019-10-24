@@ -4,5 +4,5 @@ pub mod client;
 pub mod database_initializer;
 mod sparql_client;
 
-pub use client::Client;
 pub use api_client::ObjectType;
+pub use client::Client;
