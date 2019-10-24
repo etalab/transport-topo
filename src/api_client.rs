@@ -27,9 +27,32 @@ pub enum ApiError {
     GenericError(String),
 }
 
-enum ObjectType {
+pub enum PropertyDataType {
+    String,
     Item,
-    Property,
+}
+
+impl std::string::ToString for PropertyDataType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::String => "string".to_owned(),
+            Self::Item => "wikibase-item".to_owned(),
+        }
+    }
+}
+
+pub enum ObjectType {
+    Item,
+    Property(PropertyDataType),
+}
+
+impl std::string::ToString for ObjectType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Item => "item".to_owned(),
+            Self::Property(_) => "property".to_owned(),
+        }
+    }
 }
 
 pub struct ApiClient {
@@ -86,17 +109,12 @@ impl ApiClient {
             })
     }
 
-    fn create_object(
+    pub fn create_object(
         &self,
         object_type: ObjectType,
         label: &str,
         extra_claims: &[json::JsonValue],
     ) -> Result<String, ApiError> {
-        let new_type = match object_type {
-            ObjectType::Item => "item",
-            ObjectType::Property => "property",
-        };
-
         let labels = object! {
             "en" => object!{
                 "language" => "en",
@@ -104,10 +122,10 @@ impl ApiClient {
             }
         };
 
-        let claims = json::stringify(match object_type {
-            ObjectType::Property => object! {
+        let claims = json::stringify(match &object_type {
+            ObjectType::Property(datatype) => object! {
                 "labels" => labels,
-                "datatype" => "string",
+                "datatype" => datatype.to_string(),
             },
             ObjectType::Item => object! {
                 "labels" => labels,
@@ -121,7 +139,7 @@ impl ApiClient {
             .post(&self.config.api_endpoint)
             .query(&[
                 ("action", "wbeditentity"),
-                ("new", new_type),
+                ("new", &object_type.to_string()),
                 ("format", "json"),
             ])
             .form(&[("token", &self.token), ("data", &claims)])
@@ -172,14 +190,6 @@ impl ApiClient {
                 }
             }
         }
-    }
-
-    pub fn create_property(
-        &self,
-        label: &str,
-        extra_claims: &[json::JsonValue],
-    ) -> Result<String, ApiError> {
-        self.create_object(ObjectType::Property, label, extra_claims)
     }
 
     pub fn create_item(

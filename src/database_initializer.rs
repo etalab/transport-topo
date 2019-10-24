@@ -1,4 +1,4 @@
-use crate::api_client::{claim_string, ApiClient, ApiError};
+use crate::api_client::{claim_string, ApiClient, ApiError, ObjectType, PropertyDataType};
 use crate::client::{Config, Items, Properties};
 use anyhow::Error;
 
@@ -20,10 +20,14 @@ fn get_or_create_item(
     Ok(id.trim_start_matches('Q').parse()?)
 }
 
-fn get_or_create_property(client: &ApiClient, label: &str) -> Result<String, Error> {
+fn get_or_create_property(
+    client: &ApiClient,
+    label: &str,
+    prop_type: PropertyDataType,
+) -> Result<String, Error> {
     // 2 properties cannot have the same label, so we just try to insert it
     // and get the id of the conflicting property if present
-    let r = client.create_property(label, &[]);
+    let r = client.create_object(ObjectType::Property(prop_type), label, &[]);
     if let Err(ApiError::PropertyAlreadyExists { label, id }) = r {
         log::info!("property \"{}\" already exists with id {}", label, id);
         Ok(id)
@@ -45,18 +49,32 @@ pub fn initial_populate(
         ..Default::default()
     })?;
 
+    let _moo = get_or_create_property(&client, "topo tools id", PropertyDataType::Item);
+
     let producer_class = get_or_create_item(&client, "producer", &[])?;
-    let instance_of = get_or_create_property(&client, "instance of")?;
+    let instance_of = get_or_create_property(&client, "instance of", PropertyDataType::String)?;
     let config = Config {
         api_endpoint: api_endpoint.to_owned(),
         sparql_endpoint: sparql_endpoint.to_owned(),
         properties: Properties {
-            produced_by: get_or_create_property(&client, "produced by")?,
+            produced_by: get_or_create_property(&client, "produced by", PropertyDataType::String)?,
             instance_of: instance_of.clone(),
-            physical_mode: get_or_create_property(&client, "physical mode")?,
-            gtfs_short_name: get_or_create_property(&client, "gtfs short name")?,
-            gtfs_long_name: get_or_create_property(&client, "gtfs long name")?,
-            gtfs_id: get_or_create_property(&client, "gtfs id")?,
+            physical_mode: get_or_create_property(
+                &client,
+                "physical mode",
+                PropertyDataType::String,
+            )?,
+            gtfs_short_name: get_or_create_property(
+                &client,
+                "gtfs short name",
+                PropertyDataType::String,
+            )?,
+            gtfs_long_name: get_or_create_property(
+                &client,
+                "gtfs long name",
+                PropertyDataType::String,
+            )?,
+            gtfs_id: get_or_create_property(&client, "gtfs id", PropertyDataType::String)?,
         },
         items: Items {
             line: get_or_create_item(&client, "line", &[])?,
