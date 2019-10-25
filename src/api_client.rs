@@ -83,14 +83,18 @@ impl ApiClient {
     }
 
     /// search for all entities for a given english label
-    pub fn find_entities(&self, label: &str) -> Result<Vec<SearchResultItem>, ApiError> {
+    pub fn find_items(
+        &self,
+        object_type: ObjectType,
+        label: &str,
+    ) -> Result<Vec<SearchResultItem>, ApiError> {
         let res = self
             .get()
             .query(&[
                 ("action", "wbsearchentities"),
                 ("language", "en"),
                 ("search", label),
-                ("type", "item"),
+                ("type", &object_type.to_string()),
             ])
             .send()?
             .json::<SearchResponse>()?;
@@ -100,8 +104,12 @@ impl ApiClient {
 
     /// search for an entity by it's english label, and return it if it is uniq
     /// if multiple items match, return an error
-    pub fn find_entity_id(&self, label: &str) -> Result<Option<String>, ApiError> {
-        self.find_entities(label)
+    pub fn find_entity_id(
+        &self,
+        object_type: ObjectType,
+        label: &str,
+    ) -> Result<Option<String>, ApiError> {
+        self.find_items(object_type, label)
             .and_then(|entries| match entries.as_slice() {
                 [] => Ok(None),
                 [e] => Ok(Some(e.id.clone())),

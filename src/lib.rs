@@ -1,4 +1,4 @@
-mod api_client;
+pub mod api_client;
 mod api_structures;
 pub mod client;
 pub mod database_initializer;

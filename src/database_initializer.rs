@@ -18,7 +18,7 @@ fn get_or_create_item<'a>(
     };
 
     // for an item, we need to do a separate query to check if the item is already there
-    let id = if let Some(id) = client.find_entity_id(label)? {
+    let id = if let Some(id) = client.find_entity_id(ObjectType::Item, label)? {
         log::info!("item \"{}\" already exists with id {}", label, id);
         id
     } else {
@@ -123,5 +123,6 @@ pub fn initial_populate(
             topo_id.as_str(),
         )?;
     }
+
     Ok(config)
 }
