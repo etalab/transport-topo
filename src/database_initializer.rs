@@ -79,14 +79,14 @@ pub fn initial_populate(
             produced_by: get_or_create_property(
                 &client,
                 "Produced by",
-                PropertyDataType::String,
+                PropertyDataType::Item,
                 topo_id.as_str(),
             )?,
             instance_of: instance_of.clone(),
             physical_mode: get_or_create_property(
                 &client,
                 "Physical mode",
-                PropertyDataType::String,
+                PropertyDataType::Item,
                 topo_id.as_str(),
             )?,
             gtfs_short_name: get_or_create_property(

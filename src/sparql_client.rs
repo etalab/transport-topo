@@ -85,18 +85,4 @@ impl SparqlClient {
             ),
         )
     }
-
-    pub fn find_producer(&self, producer_id: &str) -> Result<Vec<HashMap<String, String>>, Error> {
-        trace!("Finding producer {}", producer_id);
-        self.sparql(
-            &["producer", "producerLabel"],
-            &format!(
-                "?producer wdt:{instance_of} wd:{producer}.
-                FILTER(?producer = wd:{producer_id})",
-                producer_id = producer_id,
-                instance_of = self.config.properties.instance_of,
-                producer = self.config.items.producer
-            ),
-        )
-    }
 }

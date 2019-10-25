@@ -1,7 +1,7 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
 use anyhow::Error;
-use log::{error, info, warn};
+use log::{info, warn};
 use serde::Deserialize;
 use std::io::Read;
 
@@ -72,21 +72,18 @@ impl Client {
 
         for route in routes {
             let r = self.sparql.find_line(producer_id, &route.id)?;
-            match r.len() {
-                0 => {
+            match r.as_slice() {
+                [] => {
                     info!(
                         "Line “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
-                    match self.api.insert_route(producer_id, producer_name, &route) {
-                        Ok(res) => info!("Ok, new item id: {}", res),
-                        Err(e) => error!("Insertion failed: {}", e),
-                    }
+                    self.api.insert_route(producer_id, producer_name, &route)?;
                 }
-                1 => {
+                [e] => {
                     info!(
                         "Line “{}” ({}) already exists with id {}, skipping",
-                        route.long_name, route.short_name, r[0]["line"]
+                        route.long_name, route.short_name, e["line"]
                     );
                 }
                 _ => warn!(
