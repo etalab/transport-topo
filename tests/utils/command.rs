@@ -11,6 +11,7 @@ pub fn run(docker: &DockerContainerWrapper, target: &str, args: &[&str]) {
     let api_endpoint = format!("http://localhost:{port}/api.php", port = api_port);
     let sparql_endpoint = format!("http://localhost:{port}/bigdata/sparql", port = sparql_port);
 
+    log::info!("running {}", target);
     let status = std::process::Command::cargo_bin(target)
         .unwrap()
         .arg("--api")

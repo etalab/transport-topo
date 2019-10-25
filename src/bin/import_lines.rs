@@ -1,4 +1,5 @@
 use log::{error, info, warn};
+use std::io::Read;
 use structopt::StructOpt;
 use transitwiki::api_client::ObjectType;
 use transitwiki::Client;
@@ -20,6 +21,13 @@ struct Opt {
     /// The GTFS file from which we want to import the lines
     #[structopt(short = "i", long = "input-gtfs")]
     gtfs_filename: String,
+
+    // temporarily, we give a config file AND urls, a merge them
+    // TODO: remove the config
+    #[structopt(short, long)]
+    api: String,
+    #[structopt(short, long)]
+    sparql: String,
 }
 
 fn main() {
@@ -32,7 +40,17 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    let mut client = Client::from_config_file(&opt.config).unwrap();
+
+    // read config
+    // TODO: make this better
+    let mut f = std::fs::File::open(&opt.config).unwrap();
+    let mut content = String::new();
+    f.read_to_string(&mut content).unwrap();
+    let mut config = toml::from_str::<transitwiki::client::Config>(&content).unwrap();
+    config.api_endpoint = opt.api.clone();
+    config.sparql_endpoint = opt.sparql.clone();
+
+    let client = Client::new(config).unwrap();
 
     if opt.producer.starts_with('Q') {
         info!("Searching the producer by id");

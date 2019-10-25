@@ -3,7 +3,6 @@ use crate::sparql_client::SparqlClient;
 use anyhow::Error;
 use log::{info, warn};
 use serde::Deserialize;
-use std::io::Read;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
@@ -46,14 +45,6 @@ impl Config {
 }
 
 impl Client {
-    pub fn from_config_file<P: AsRef<std::path::Path>>(config_file: P) -> Result<Self, Error> {
-        let mut f = std::fs::File::open(config_file)?;
-        let mut content = String::new();
-        f.read_to_string(&mut content)?;
-        let config = toml::from_str::<Config>(&content)?;
-        Self::new(config)
-    }
-
     pub fn new(config: Config) -> Result<Self, Error> {
         Ok(Self {
             api: ApiClient::new(config.clone())?,
@@ -62,7 +53,7 @@ impl Client {
     }
 
     pub fn import_lines(
-        &mut self,
+        &self,
         gtfs_filename: &str,
         producer_id: &str,
         producer_name: &str,
