@@ -72,6 +72,11 @@ fn simple_test() {
                 "{}/tests/fixtures/gtfs.zip",
                 std::env::var("CARGO_MANIFEST_DIR").expect("impossible to find env var")
             ),
+            "--config",
+            &format!(
+                "{}/tests/tmp_config.toml",
+                std::env::var("CARGO_MANIFEST_DIR").expect("impossible to config file")
+            ),
         ],
     );
 
