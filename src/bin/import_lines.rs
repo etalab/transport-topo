@@ -1,5 +1,6 @@
 use log::{debug, error, info, warn};
 use structopt::StructOpt;
+use transitwiki::api_client::ObjectType;
 use transitwiki::Client;
 
 #[derive(StructOpt, Debug)]
@@ -61,7 +62,7 @@ fn main() {
         }
     } else {
         info!("Searching the producer by name");
-        match client.api.find_entity_id(&opt.producer) {
+        match client.api.find_entity_id(ObjectType::Item, &opt.producer) {
             Ok(None) => warn!("We found no producer with the name {}", opt.producer),
             Ok(Some(id)) => info!("The following item match the search {}", id),
             Err(error) => error!("Could not find the entity by name: {}", error),

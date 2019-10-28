@@ -28,7 +28,7 @@ impl SparqlClient {
         Ok(json::parse(&response)?)
     }
 
-    fn sparql(
+    pub fn sparql(
         &self,
         variables: &[&str],
         where_clause: &str,
