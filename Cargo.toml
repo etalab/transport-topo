@@ -24,7 +24,7 @@ lazy_static = "1.4"
 regex = "1.3"
 
 [dev-dependencies]
-docker-compose = { git = "https://github.com/antoine-de/rust-docker-compose.git", rev = "1643ef5f3747c8c9cc5e1fa41ef5313990ea172f" }
+docker-compose = { git = "https://github.com/antoine-de/rust-docker-compose.git", rev = "312d515" }
 #docker-compose = { git = "https://github.com/sfackler/rust-docker-compose.git" }
 assert_cmd = "0.11"
 maplit = "1"

@@ -33,19 +33,16 @@ impl SparqlClient {
         variables: &[&str],
         where_clause: &str,
     ) -> Result<Vec<HashMap<String, String>>, Error> {
-        let vars = variables.iter().map(|var| format!("?{}", var)).format(" ");
+        let vars = variables.iter().format(" ");
         let query = format!("SELECT {} WHERE {{ {} SERVICE wikibase:label {{ bd:serviceParam wikibase:language \"en\". }} }}", vars, where_clause);
         let res = self.query(&query)?;
 
         let mut result = Vec::new();
         for binding in res["results"]["bindings"].members() {
-            let mut values = HashMap::new();
-            for &var in variables {
-                values.insert(
-                    var.to_string(),
-                    binding[var]["value"].as_str().unwrap_or("").into(),
-                );
-            }
+            let values = binding
+                .entries()
+                .map(|(k, v)| (k.to_string(), v["value"].as_str().unwrap_or("").into()))
+                .collect();
             result.push(values);
         }
         Ok(result)
@@ -59,12 +56,12 @@ impl SparqlClient {
         trace!("Finding line {} of producer {}", gtfs_id, producer_id);
         self.sparql(
             &[
-                "line",
-                "lineLabel",
-                "route_short_name",
-                "route_long_name",
-                "physical_mode",
-                "gtfs_id",
+                "?line",
+                "?lineLabel",
+                "?route_short_name",
+                "?route_long_name",
+                "?physical_mode",
+                "?gtfs_id",
             ],
             &format!(
                 "?line wdt:{instance_of} wd:{line}.
@@ -82,20 +79,6 @@ impl SparqlClient {
                 physical_mode = self.config.properties.physical_mode,
                 gtfs_id = gtfs_id,
                 producer_id = producer_id
-            ),
-        )
-    }
-
-    pub fn find_producer(&self, producer_id: &str) -> Result<Vec<HashMap<String, String>>, Error> {
-        trace!("Finding producer {}", producer_id);
-        self.sparql(
-            &["producer", "producerLabel"],
-            &format!(
-                "?producer wdt:{instance_of} wd:{producer}.
-                FILTER(?producer = wd:{producer_id})",
-                producer_id = producer_id,
-                instance_of = self.config.properties.instance_of,
-                producer = self.config.items.producer
             ),
         )
     }

@@ -1,4 +1,5 @@
 use crate::api_structures::*;
+use anyhow::anyhow;
 use json::object;
 use regex::Regex;
 use thiserror::Error;
@@ -233,6 +234,19 @@ impl ApiClient {
         ];
 
         self.create_object(ObjectType::Item, &label, &claims)
+    }
+
+    pub fn get_label(&self, id: &str) -> Result<String, anyhow::Error> {
+        let res = self
+            .get()
+            .query(&[("action", "wbgetentities"), ("ids", id), ("format", "json")])
+            .send()?
+            .json::<serde_json::Value>()?;
+
+        res.pointer(&format!("/entities/{}/labels/en/value", id))
+            .and_then(|l| l.as_str())
+            .map(|l| l.to_owned())
+            .ok_or_else(|| anyhow!("no entitity {}", &id))
     }
 }
 

@@ -1,9 +1,8 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
 use anyhow::Error;
-use log::{error, info, warn};
+use log::{info, warn};
 use serde::Deserialize;
-use std::io::Read;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
@@ -46,14 +45,6 @@ impl Config {
 }
 
 impl Client {
-    pub fn from_config_file<P: AsRef<std::path::Path>>(config_file: P) -> Result<Self, Error> {
-        let mut f = std::fs::File::open(config_file)?;
-        let mut content = String::new();
-        f.read_to_string(&mut content)?;
-        let config = toml::from_str::<Config>(&content)?;
-        Self::new(config)
-    }
-
     pub fn new(config: Config) -> Result<Self, Error> {
         Ok(Self {
             api: ApiClient::new(config.clone())?,
@@ -62,7 +53,7 @@ impl Client {
     }
 
     pub fn import_lines(
-        &mut self,
+        &self,
         gtfs_filename: &str,
         producer_id: &str,
         producer_name: &str,
@@ -72,21 +63,18 @@ impl Client {
 
         for route in routes {
             let r = self.sparql.find_line(producer_id, &route.id)?;
-            match r.len() {
-                0 => {
+            match r.as_slice() {
+                [] => {
                     info!(
                         "Line “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
-                    match self.api.insert_route(producer_id, producer_name, &route) {
-                        Ok(res) => info!("Ok, new item id: {}", res),
-                        Err(e) => error!("Insertion failed: {}", e),
-                    }
+                    self.api.insert_route(producer_id, producer_name, &route)?;
                 }
-                1 => {
+                [e] => {
                     info!(
                         "Line “{}” ({}) already exists with id {}, skipping",
-                        route.long_name, route.short_name, r[0]["line"]
+                        route.long_name, route.short_name, e["line"]
                     );
                 }
                 _ => warn!(

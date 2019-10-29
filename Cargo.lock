@@ -357,8 +357,8 @@ dependencies = [
 
 [[package]]
 name = "docker-compose"
-version = "0.1.0"
-source = "git+https://github.com/antoine-de/rust-docker-compose.git?rev=1643ef5f3747c8c9cc5e1fa41ef5313990ea172f#1643ef5f3747c8c9cc5e1fa41ef5313990ea172f"
+version = "0.2.0"
+source = "git+https://github.com/antoine-de/rust-docker-compose.git?rev=312d515#312d5153107965208c1dba712e7f6fd50c7e9f82"
 dependencies = [
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1716,7 +1716,7 @@ dependencies = [
  "ansi_term 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_cmd 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "docker-compose 0.1.0 (git+https://github.com/antoine-de/rust-docker-compose.git?rev=1643ef5f3747c8c9cc5e1fa41ef5313990ea172f)",
+ "docker-compose 0.2.0 (git+https://github.com/antoine-de/rust-docker-compose.git?rev=312d515)",
  "gtfs-structures 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "json 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1969,7 +1969,7 @@ dependencies = [
 "checksum derivative 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6073e9676dbebdddeabaeb63e3b7cefd23c86f5c41d381ee1237cc77b1079898"
 "checksum difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 "checksum digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
-"checksum docker-compose 0.1.0 (git+https://github.com/antoine-de/rust-docker-compose.git?rev=1643ef5f3747c8c9cc5e1fa41ef5313990ea172f)" = "<none>"
+"checksum docker-compose 0.2.0 (git+https://github.com/antoine-de/rust-docker-compose.git?rev=312d515)" = "<none>"
 "checksum dtoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ea57b42383d091c85abcc2706240b94ab2a8fa1fc81c10ff23c4de06e2a90b5e"
 "checksum either 1.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5527cfe0d098f36e3f8839852688e63c8fff1c90b2b405aef730615f9a7bcf7b"
 "checksum encoding_rs 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)" = "4155785c79f2f6701f185eb2e6b4caf0555ec03477cb4c70db67b465311620ed"
