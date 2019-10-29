@@ -8,28 +8,9 @@ pub struct Wikibase {
 
 impl Wikibase {
     pub fn new(docker: &DockerContainerWrapper) -> Self {
-        let config = transitwiki::client::Config {
-            api_endpoint: docker.api_endpoint.clone(),
-            sparql_endpoint: docker.sparql_endpoint.clone(),
-
-            // hardcode the id for the moment
-            // TODO remove this
-            properties: transitwiki::client::Properties {
-                instance_of: "P2".to_owned(),
-                produced_by: "P3".to_owned(),
-                physical_mode: "P4".to_owned(),
-                gtfs_short_name: "P5".to_owned(),
-                gtfs_long_name: "P6".to_owned(),
-                gtfs_id: "P7".to_owned(),
-            },
-            items: transitwiki::client::Items {
-                producer: "Q1".to_owned(),
-                line: "Q2".to_owned(),
-                bus: "Q3".to_owned(),
-            },
-        };
         Self {
-            client: transitwiki::Client::new(config).expect("impossible to create wikibase client"),
+            client: transitwiki::Client::new(&docker.api_endpoint, &docker.sparql_endpoint, "P1")
+                .expect("impossible to create wikibase client"),
         }
     }
 

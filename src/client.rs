@@ -6,14 +6,13 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
-    pub api_endpoint: String,
-    pub sparql_endpoint: String,
     pub properties: Properties,
     pub items: Items,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Properties {
+    pub topo_id_id: String,
     pub produced_by: String,
     pub instance_of: String,
     pub physical_mode: String,
@@ -45,10 +44,11 @@ impl Config {
 }
 
 impl Client {
-    pub fn new(config: Config) -> Result<Self, Error> {
+    pub fn new(api_endpoint: &str, sparql_enpoint: &str, topo_id_id: &str) -> Result<Self, Error> {
+        let sparql = SparqlClient::new(sparql_enpoint, topo_id_id)?;
         Ok(Self {
-            api: ApiClient::new(config.clone())?,
-            sparql: SparqlClient::new(config),
+            api: ApiClient::new(api_endpoint, sparql.config.clone())?,
+            sparql,
         })
     }
 

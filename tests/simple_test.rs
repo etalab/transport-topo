@@ -42,6 +42,12 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
             "line".to_owned(),
             "bus".to_owned(),
             "bob_the_bus_mapper".to_owned(),
+            "instance_of".to_owned(),
+            "physical_mode".to_owned(),
+            "gtfs_short_name".to_owned(),
+            "gtfs_long_name".to_owned(),
+            "gtfs_id".to_owned(),
+            "produced_by".to_owned(),
         ]
     );
 }
@@ -50,19 +56,18 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
 fn simple_test() {
     let docker = utils::DockerContainerWrapper::new();
 
-    utils::run(&docker, "prepopulate", &[]);
+    utils::run("prepopulate", &["--api", &docker.api_endpoint]);
 
     let wikibase = utils::Wikibase::new(&docker);
     check_initiale_state(&wikibase);
 
     // We call again the prepopulate, there shouldn't be any differences
     // since it should be idempotent
-    utils::run(&docker, "prepopulate", &[]);
+    utils::run("prepopulate", &["--api", &docker.api_endpoint]);
     check_initiale_state(&wikibase);
 
     // we now import a gtfs
     utils::run(
-        &docker,
         "import_lines",
         &[
             "--producer",
@@ -72,11 +77,10 @@ fn simple_test() {
                 "{}/tests/fixtures/gtfs.zip",
                 std::env::var("CARGO_MANIFEST_DIR").expect("impossible to find env var")
             ),
-            "--config",
-            &format!(
-                "{}/tests/tmp_config.toml",
-                std::env::var("CARGO_MANIFEST_DIR").expect("impossible to config file")
-            ),
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
         ],
     );
 
