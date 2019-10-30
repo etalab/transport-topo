@@ -1,6 +1,6 @@
 mod utils;
 use maplit::hashset;
-use transitwiki::api_client::{ObjectType, PropertyDataType};
+use transit_topo::api_client::{ObjectType, PropertyDataType};
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
     // we first check that our exists method cannot find a unknown object
@@ -68,7 +68,7 @@ fn simple_test() {
 
     // we now import a gtfs
     utils::run(
-        "import_lines",
+        "import-gtfs",
         &[
             "--producer",
             "Q4",

@@ -5,7 +5,7 @@ use log::{info, warn};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone, Default)]
-pub struct Config {
+pub struct EntitiesId {
     pub properties: Properties,
     pub items: Items,
 }
@@ -33,7 +33,7 @@ pub struct Client {
     pub sparql: SparqlClient,
 }
 
-impl Config {
+impl EntitiesId {
     pub fn physical_mode(&self, route: &gtfs_structures::Route) -> &str {
         use gtfs_structures::RouteType::*;
         match route.route_type {
@@ -52,7 +52,7 @@ impl Client {
         })
     }
 
-    pub fn import_lines(
+    pub fn import_gtfs(
         &self,
         gtfs_filename: &str,
         producer_id: &str,

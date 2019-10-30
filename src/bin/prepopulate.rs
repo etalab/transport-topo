@@ -18,6 +18,6 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    transitwiki::database_initializer::initial_populate(&opt.api, true)
+    transit_topo::database_initializer::initial_populate(&opt.api, true)
         .expect("impossible to populate wikibase");
 }

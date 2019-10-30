@@ -1,7 +1,7 @@
 use crate::api_client::{
     claim_item, claim_string, ApiClient, ApiError, ObjectType, PropertyDataType,
 };
-use crate::client::{Config, Items, Properties};
+use crate::client::{EntitiesId, Items, Properties};
 use anyhow::Error;
 use inflector::Inflector;
 
@@ -52,7 +52,7 @@ fn get_or_create_property<'a>(
     }
 }
 
-pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<Config, Error> {
+pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<EntitiesId, Error> {
     let client = ApiClient::new(api_endpoint, Default::default())?;
 
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
@@ -64,7 +64,7 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<Co
         PropertyDataType::Item,
         topo_id.as_str(),
     )?;
-    let config = Config {
+    let config = EntitiesId {
         properties: Properties {
             topo_id_id: topo_id.to_owned(),
             produced_by: get_or_create_property(

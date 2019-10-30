@@ -16,14 +16,16 @@ You need an up to date rust tool-chain (commonly installed with [rustup](https:/
 
 ## Tools
 
+Note: all binaries expose a `--help` cli argument to document all the available arguments.
+
 #### GTFS import
 
-You can use the tool `import_lines` to import a GTFS in TOPO.
+You can use the tool `import-gtfs` to import a GTFS in TOPO.
 
 Identifiers of entities can be the same across different producers. That is why we require to tell which `producer` is providing the GTFS.
 The `producer` needs to be already added to the transport TOPO instance.
 
-    cargo run --release --bin import_lines -- --api <url of the wikibase api> --sparql <url of the sparql api> --producer <id of the producer> -i <path to gtfs.zip>
+    cargo run --release --bin import-gtfs -- --api <url of the wikibase api> --sparql <url of the sparql api> --producer <id of the producer> -i <path to gtfs.zip>
 
 ## Contributing
 
@@ -72,4 +74,4 @@ For dev purpose, a mock producer has been added by the `prepopulate`: `Q4`.
 
 So to import the GTFS run:
 
-    cargo run --release --bin import_lines -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer Q4 -i <path to gtfs.zip>
+    cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer Q4 -i <path to gtfs.zip>

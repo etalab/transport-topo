@@ -1,4 +1,4 @@
-use crate::client::{Config, Items, Properties};
+use crate::client::{EntitiesId, Items, Properties};
 use itertools::Itertools;
 use log::{debug, trace};
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ pub enum SparqlError {
 pub struct SparqlClient {
     client: reqwest::Client,
     endpoint: String,
-    pub config: crate::client::Config,
+    pub config: crate::client::EntitiesId,
 }
 
 impl SparqlClient {
@@ -29,7 +29,7 @@ impl SparqlClient {
         let mut client = Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
-            config: Config {
+            config: EntitiesId {
                 properties: Properties {
                     topo_id_id: topo_id_id.to_owned(),
                     ..Default::default()
@@ -42,8 +42,8 @@ impl SparqlClient {
         Ok(client)
     }
 
-    pub fn discover_config(&self) -> Result<Config, SparqlError> {
-        Ok(Config {
+    pub fn discover_config(&self) -> Result<EntitiesId, SparqlError> {
+        Ok(EntitiesId {
             items: Items {
                 line: self.find_entity_by_topo_id("line")?,
                 producer: self.find_entity_by_topo_id("producer")?,

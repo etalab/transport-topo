@@ -58,13 +58,13 @@ impl std::string::ToString for ObjectType {
 
 pub struct ApiClient {
     client: reqwest::Client,
-    config: crate::client::Config,
+    config: crate::client::EntitiesId,
     endpoint: String,
     token: String,
 }
 
 impl ApiClient {
-    pub fn new(endpoint: &str, config: crate::client::Config) -> Result<Self, ApiError> {
+    pub fn new(endpoint: &str, config: crate::client::EntitiesId) -> Result<Self, ApiError> {
         let client = reqwest::Client::new();
         let res = client
             .get(endpoint)
