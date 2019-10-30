@@ -1,0 +1,29 @@
+# This docker-compose file extends the one used for the tests (./tests/minimal-docker-compose.yml)
+# it mainly bind the main services to some port for easier use,
+# and use volumes to have persistence
+version: '3'
+
+services:
+  wikibase:
+    ports:
+     - "8181:80"
+    volumes:
+      - mediawiki-images-data:/var/www/html/images
+  mysql:
+    volumes:
+      - mediawiki-mysql-data:/var/lib/mysql
+  wdqs-frontend:
+    image: wikibase/wdqs-frontend:latest
+    ports:
+     - "8282:80"
+  wdqs:
+    volumes:
+      - query-service-data:/wdqs/data
+  wdqs-proxy:
+    ports:
+      - "8989:80"
+
+volumes:
+  mediawiki-mysql-data:
+  mediawiki-images-data:
+  query-service-data:

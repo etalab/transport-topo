@@ -1,4 +1,4 @@
-# TODO explain this docker-compose
+# minimal docker-compose to run the wikibase stack
 version: '3'
 
 services:
