@@ -68,7 +68,7 @@ fn simple_test() {
 
     // we now import a gtfs
     utils::run(
-        "import_lines",
+        "import-gtfs",
         &[
             "--producer",
             "Q4",

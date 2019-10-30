@@ -52,7 +52,7 @@ impl Client {
         })
     }
 
-    pub fn import_lines(
+    pub fn import_gtfs(
         &self,
         gtfs_filename: &str,
         producer_id: &str,

@@ -4,7 +4,7 @@ use transit_topo::api_client::ObjectType;
 use transit_topo::Client;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "basic")]
+#[structopt(name = "import-gtfs")]
 struct Opt {
     /// Identifier of the topo id property
     #[structopt(short, long, default_value = "P1")]
@@ -51,7 +51,7 @@ fn main() {
         info!("Found the producer “{}”", &producer_label);
         info!("Starting the importation of lines");
         client
-            .import_lines(&opt.gtfs_filename, &opt.producer, &producer_label)
+            .import_gtfs(&opt.gtfs_filename, &opt.producer, &producer_label)
             .expect("unable to import");
     } else {
         info!("Searching the producer by name");
