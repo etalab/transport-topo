@@ -59,35 +59,35 @@ impl std::string::ToString for ObjectType {
 pub struct ApiClient {
     client: reqwest::Client,
     config: crate::client::Config,
+    endpoint: String,
     token: String,
 }
 
 impl ApiClient {
-    pub fn new(config: crate::client::Config) -> Result<Self, ApiError> {
+    pub fn new(endpoint: &str, config: crate::client::Config) -> Result<Self, ApiError> {
         let client = reqwest::Client::new();
         let res = client
-            .get(&config.api_endpoint)
+            .get(endpoint)
             .query(&[("format", "json"), ("action", "query"), ("meta", "tokens")])
             .send()?
             .json::<TokenResponse>()?;
         Ok(ApiClient {
             client,
             config,
+            endpoint: endpoint.to_owned(),
             token: res.query.tokens.csrftoken,
         })
     }
 
     fn get(&self) -> reqwest::RequestBuilder {
-        self.client
-            .get(&self.config.api_endpoint)
-            .query(&[("format", "json")])
+        self.client.get(&self.endpoint).query(&[("format", "json")])
     }
 
     /// search for all entities for a given english label
-    pub fn find_items(
+    pub fn find_entities(
         &self,
-        object_type: ObjectType,
         label: &str,
+        obj_type: ObjectType,
     ) -> Result<Vec<SearchResultItem>, ApiError> {
         let res = self
             .get()
@@ -95,7 +95,7 @@ impl ApiClient {
                 ("action", "wbsearchentities"),
                 ("language", "en"),
                 ("search", label),
-                ("type", &object_type.to_string()),
+                ("type", &obj_type.to_string()),
             ])
             .send()?
             .json::<SearchResponse>()?;
@@ -110,7 +110,7 @@ impl ApiClient {
         object_type: ObjectType,
         label: &str,
     ) -> Result<Option<String>, ApiError> {
-        self.find_items(object_type, label)
+        self.find_entities(label, object_type)
             .and_then(|entries| match entries.as_slice() {
                 [] => Ok(None),
                 [e] => Ok(Some(e.id.clone())),
@@ -135,6 +135,7 @@ impl ApiClient {
             ObjectType::Property(datatype) => object! {
                 "labels" => labels,
                 "datatype" => datatype.to_string(),
+                "claims" => json::Array::from(extra_claims),
             },
             ObjectType::Item => object! {
                 "labels" => labels,
@@ -145,7 +146,7 @@ impl ApiClient {
         log::trace!("claims: {}", claims);
         let mut res = self
             .client
-            .post(&self.config.api_endpoint)
+            .post(&self.endpoint)
             .query(&[
                 ("action", "wbeditentity"),
                 ("new", &object_type.to_string()),

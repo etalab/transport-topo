@@ -3,10 +3,9 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
 struct Opt {
+    /// Endpoint of the wikibase api
     #[structopt(short, long)]
     api: String,
-    #[structopt(short, long)]
-    sparql: String,
 }
 
 fn main() {
@@ -19,6 +18,6 @@ fn main() {
     }
 
     let opt = Opt::from_args();
-    transitwiki::database_initializer::initial_populate(&opt.api, &opt.sparql, true)
+    transitwiki::database_initializer::initial_populate(&opt.api, true)
         .expect("impossible to populate wikibase");
 }

@@ -52,30 +52,21 @@ fn get_or_create_property<'a>(
     }
 }
 
-pub fn initial_populate(
-    api_endpoint: &str,
-    sparql_endpoint: &str,
-    default_producer: bool,
-) -> Result<Config, Error> {
-    let client = ApiClient::new(Config {
-        api_endpoint: api_endpoint.to_owned(),
-        sparql_endpoint: sparql_endpoint.to_owned(),
-        ..Default::default()
-    })?;
+pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<Config, Error> {
+    let client = ApiClient::new(api_endpoint, Default::default())?;
 
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
 
-    let producer_class = get_or_create_item(&client, "producer", &[], topo_id.as_str())?;
+    let producer_class = get_or_create_item(&client, "Producer", &[], topo_id.as_str())?;
     let instance_of = get_or_create_property(
         &client,
-        "instance of",
+        "Instance of",
         PropertyDataType::Item,
         topo_id.as_str(),
     )?;
     let config = Config {
-        api_endpoint: api_endpoint.to_owned(),
-        sparql_endpoint: sparql_endpoint.to_owned(),
         properties: Properties {
+            topo_id_id: topo_id.to_owned(),
             produced_by: get_or_create_property(
                 &client,
                 "Produced by",
