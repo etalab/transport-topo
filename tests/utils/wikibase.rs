@@ -1,15 +1,15 @@
 //! Some utilities wikibase queries to ease tests
 use crate::utils::DockerContainerWrapper;
-use transitwiki::api_client::ObjectType;
+use transit_topo::api_client::ObjectType;
 
 pub struct Wikibase {
-    client: transitwiki::Client,
+    client: transit_topo::Client,
 }
 
 impl Wikibase {
     pub fn new(docker: &DockerContainerWrapper) -> Self {
         Self {
-            client: transitwiki::Client::new(&docker.api_endpoint, &docker.sparql_endpoint, "P1")
+            client: transit_topo::Client::new(&docker.api_endpoint, &docker.sparql_endpoint, "P1")
                 .expect("impossible to create wikibase client"),
         }
     }

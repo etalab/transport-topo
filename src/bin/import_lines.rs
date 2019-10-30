@@ -1,7 +1,7 @@
 use log::{error, info, warn};
 use structopt::StructOpt;
-use transitwiki::api_client::ObjectType;
-use transitwiki::Client;
+use transit_topo::api_client::ObjectType;
+use transit_topo::Client;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
