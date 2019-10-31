@@ -13,10 +13,6 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
     ));
     assert!(wikibase.exists(
         ObjectType::Property(PropertyDataType::String),
-        "physical mode"
-    ));
-    assert!(wikibase.exists(
-        ObjectType::Property(PropertyDataType::String),
         "gtfs short name"
     ));
     assert!(wikibase.exists(
@@ -29,6 +25,7 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
         "Topo tools id"
     ));
 
+    assert!(wikibase.exists(ObjectType::Item, "physical mode"));
     assert!(wikibase.exists(ObjectType::Item, "producer"));
     assert!(wikibase.exists(ObjectType::Item, "line"));
     assert!(wikibase.exists(ObjectType::Item, "bus"));
@@ -40,7 +37,6 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
         hashset![
             "producer".to_owned(),
             "line".to_owned(),
-            "bus".to_owned(),
             "bob_the_bus_mapper".to_owned(),
             "instance_of".to_owned(),
             "physical_mode".to_owned(),
@@ -48,6 +44,16 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
             "gtfs_long_name".to_owned(),
             "gtfs_id".to_owned(),
             "produced_by".to_owned(),
+            "physical_mode".to_owned(),
+            "has_physical_mode".to_owned(),
+            "tramway".to_owned(),
+            "subway".to_owned(),
+            "railway".to_owned(),
+            "bus".to_owned(),
+            "ferry".to_owned(),
+            "cable_car".to_owned(),
+            "gondola".to_owned(),
+            "funicular".to_owned(),
         ]
     );
 }

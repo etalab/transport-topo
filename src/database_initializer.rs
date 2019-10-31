@@ -58,12 +58,20 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
 
     let producer_class = get_or_create_item(&client, "Producer", &[], topo_id.as_str())?;
+    let gtfs_id = get_or_create_property(
+        &client,
+        "GTFS id",
+        PropertyDataType::String,
+        topo_id.as_str(),
+    )?;
+    let physical_mode = get_or_create_item(&client, "Physical mode", &[], topo_id.as_str())?;
     let instance_of = get_or_create_property(
         &client,
         "Instance of",
         PropertyDataType::Item,
         topo_id.as_str(),
     )?;
+    let is_physical_mode_claim = claim_item(&instance_of, &physical_mode);
     let config = EntitiesId {
         properties: Properties {
             topo_id_id: topo_id.to_owned(),
@@ -74,12 +82,7 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
                 topo_id.as_str(),
             )?,
             instance_of: instance_of.clone(),
-            physical_mode: get_or_create_property(
-                &client,
-                "Physical mode",
-                PropertyDataType::Item,
-                topo_id.as_str(),
-            )?,
+            physical_mode: physical_mode.to_owned(),
             gtfs_short_name: get_or_create_property(
                 &client,
                 "GTFS short name",
@@ -92,17 +95,65 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
-            gtfs_id: get_or_create_property(
+            gtfs_id: gtfs_id.to_owned(),
+            has_physical_mode: get_or_create_property(
                 &client,
-                "GTFS id",
-                PropertyDataType::String,
+                "Has physical mode",
+                PropertyDataType::Item,
                 topo_id.as_str(),
             )?,
         },
         items: Items {
-            line: get_or_create_item(&client, "line", &[], topo_id.as_str())?,
+            line: get_or_create_item(&client, "Line", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
-            bus: get_or_create_item(&client, "bus", &[], topo_id.as_str())?,
+            tramway: get_or_create_item(
+                &client,
+                "Tramway",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "0")],
+                topo_id.as_str(),
+            )?,
+            subway: get_or_create_item(
+                &client,
+                "Subway",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "1")],
+                topo_id.as_str(),
+            )?,
+            railway: get_or_create_item(
+                &client,
+                "Railway",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "2")],
+                topo_id.as_str(),
+            )?,
+            bus: get_or_create_item(
+                &client,
+                "Bus",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "3")],
+                topo_id.as_str(),
+            )?,
+            ferry: get_or_create_item(
+                &client,
+                "Ferry",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "4")],
+                topo_id.as_str(),
+            )?,
+            cable_car: get_or_create_item(
+                &client,
+                "Cable car",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "5")],
+                topo_id.as_str(),
+            )?,
+            gondola: get_or_create_item(
+                &client,
+                "Gondola",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "6")],
+                topo_id.as_str(),
+            )?,
+            funicular: get_or_create_item(
+                &client,
+                "Funicular",
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "7")],
+                topo_id.as_str(),
+            )?,
         },
     };
     if default_producer {

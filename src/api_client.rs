@@ -229,7 +229,7 @@ impl ApiClient {
             claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
             claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
             claim_item(
-                &self.config.properties.physical_mode,
+                &self.config.properties.has_physical_mode,
                 self.config.physical_mode(route),
             ),
         ];
