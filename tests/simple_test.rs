@@ -27,7 +27,7 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
 
     assert!(wikibase.exists(ObjectType::Item, "physical mode"));
     assert!(wikibase.exists(ObjectType::Item, "producer"));
-    assert!(wikibase.exists(ObjectType::Item, "line"));
+    assert!(wikibase.exists(ObjectType::Item, "route"));
     assert!(wikibase.exists(ObjectType::Item, "bus"));
     assert!(wikibase.exists(ObjectType::Item, "bob the bus mapper"));
 

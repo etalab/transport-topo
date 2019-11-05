@@ -19,12 +19,17 @@ pub struct Properties {
     pub gtfs_short_name: String,
     pub gtfs_long_name: String,
     pub gtfs_id: String,
+    pub data_source: String,
+    pub first_seen_in: String,
+    pub file_link: String,
+    pub file_format: String,
+    pub content_id: String,
     pub has_physical_mode: String,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Items {
-    pub line: String,
+    pub route: String,
     pub producer: String,
     pub tramway: String,
     pub subway: String,
@@ -74,17 +79,23 @@ impl Client {
         producer_name: &str,
     ) -> Result<(), anyhow::Error> {
         let gtfs = gtfs_structures::RawGtfs::from_zip(gtfs_filename).map_err(|e| e.compat())?;
+
         let routes = gtfs.routes.map_err(|e| e.compat())?;
+        log::info!("import gtfs version {}", crate::GIT_VERSION);
+        let data_source_id =
+            self.api
+                .insert_data_source(&gtfs.sha256, &producer_id, gtfs_filename)?;
 
         for route in routes {
-            let r = self.sparql.find_line(producer_id, &route.id)?;
+            let r = self.sparql.find_route(&producer_id, &route.id)?;
             match r.as_slice() {
                 [] => {
                     info!(
                         "Line “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
-                    self.api.insert_route(producer_id, producer_name, &route)?;
+                    self.api
+                        .insert_route(&route, &data_source_id, producer_name)?;
                 }
                 [e] => {
                     info!(

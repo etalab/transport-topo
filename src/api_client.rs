@@ -210,11 +210,32 @@ impl ApiClient {
         self.create_object(ObjectType::Item, label, extra_claims)
     }
 
+    pub fn insert_data_source(
+        &self,
+        sha256: &Option<String>,
+        producer: &str,
+        path: &str,
+    ) -> Result<String, ApiError> {
+        let dt = chrono::Utc::now();
+        let label = format!("Data source for {} - imported {}", &producer, dt);
+
+        let mut claims = vec![
+            claim_item(&self.config.properties.produced_by, producer),
+            claim_string(&self.config.properties.file_link, path),
+            claim_string(&self.config.properties.file_format, "GTFS"),
+        ];
+        if let Some(sha) = sha256 {
+            claims.push(claim_string(&self.config.properties.content_id, sha));
+        }
+
+        self.create_object(ObjectType::Item, &label, &claims)
+    }
+
     pub fn insert_route(
         &self,
-        producer: &str,
-        producer_name: &str,
         route: &gtfs_structures::Route,
+        data_source_id: &str,
+        producer_name: &str,
     ) -> Result<String, ApiError> {
         let route_name = if !route.long_name.is_empty() {
             route.long_name.as_str()
@@ -223,9 +244,12 @@ impl ApiClient {
         };
         let label = format!("{} – ({})", route_name, producer_name);
         let claims = [
-            claim_item(&self.config.properties.instance_of, &self.config.items.line),
+            claim_item(
+                &self.config.properties.instance_of,
+                &self.config.items.route,
+            ),
             claim_string(&self.config.properties.gtfs_id, &route.id),
-            claim_item(&self.config.properties.produced_by, producer),
+            claim_item(&self.config.properties.data_source, data_source_id),
             claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
             claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
             claim_item(
