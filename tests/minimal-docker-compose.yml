@@ -71,6 +71,7 @@ services:
      - WIKIBASE_HOST=wikibase
      - WDQS_HOST=wdqs
      - WDQS_PORT=9999
+     - WAITING_POLL_TIME_IN_S=0
     volumes:
       - ./docker_config/custom_update.sh:/custom_update.sh
   elasticsearch:

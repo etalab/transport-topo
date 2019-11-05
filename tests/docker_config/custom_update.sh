@@ -1,6 +1,7 @@
 # script needed by wdqs-updater
 # we override it to give a custom "poll-delay" value (with the -d param)
-# so the updater is run more often (with waiting only 1s instead of 10)
+# so the updater is run more often
+
 cd /wdqs
 
 # TODO env vars for entity namespaces, scheme and other settings
@@ -10,4 +11,4 @@ cd /wdqs
 --wikibaseHost $WIKIBASE_HOST \
 --wikibaseScheme $WIKIBASE_SCHEME \
 --entityNamespaces $WDQS_ENTITY_NAMESPACES \
--d 0
+-d $WAITING_POLL_TIME_IN_S
