@@ -212,7 +212,7 @@ impl ApiClient {
 
     pub fn insert_data_source(
         &self,
-        sha256: &Option<String>,
+        sha_256: &Option<String>,
         producer: &str,
         path: &str,
     ) -> Result<String, ApiError> {
@@ -221,12 +221,12 @@ impl ApiClient {
 
         let mut claims = vec![
             claim_item(&self.config.properties.produced_by, producer),
-            claim_string(&self.config.properties.file_link, path),
+            claim_string(&self.config.properties.source, path),
             claim_string(&self.config.properties.file_format, "GTFS"),
             claim_string(&self.config.properties.tool_version, crate::GIT_VERSION),
         ];
-        if let Some(sha) = sha256 {
-            claims.push(claim_string(&self.config.properties.content_id, sha));
+        if let Some(sha) = sha_256 {
+            claims.push(claim_string(&self.config.properties.sha_256, sha));
         }
 
         self.create_object(ObjectType::Item, &label, &claims)

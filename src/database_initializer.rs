@@ -114,10 +114,9 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
                 PropertyDataType::Item,
                 topo_id.as_str(),
             )?,
-
-            file_link: get_or_create_property(
+            source: get_or_create_property(
                 &client,
-                "File link", //Link to the raw file
+                "Source", //Link to the raw file
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
@@ -127,9 +126,9 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
-            content_id: get_or_create_property(
+            sha_256: get_or_create_property(
                 &client,
-                "Content id", //Checksum of the file
+                "sha_256",
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
@@ -141,7 +140,7 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             )?,
         },
         items: Items {
-            route: get_or_create_item(&client, "route", &[], topo_id.as_str())?,
+            route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
             tramway: get_or_create_item(
                 &client,

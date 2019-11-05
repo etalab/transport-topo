@@ -21,9 +21,9 @@ pub struct Properties {
     pub gtfs_id: String,
     pub data_source: String,
     pub first_seen_in: String,
-    pub file_link: String,
+    pub source: String,
     pub file_format: String,
-    pub content_id: String,
+    pub sha_256: String,
     pub has_physical_mode: String,
     pub tool_version: String,
 }
@@ -92,7 +92,7 @@ impl Client {
             match r.as_slice() {
                 [] => {
                     info!(
-                        "Line “{}” ({}) does not exist, inserting",
+                        "Route “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
                     self.api
@@ -100,12 +100,12 @@ impl Client {
                 }
                 [e] => {
                     info!(
-                        "Line “{}” ({}) already exists with id {}, skipping",
-                        route.long_name, route.short_name, e["line"]
+                        "Route “{}” ({}) already exists with id {}, skipping",
+                        route.long_name, route.short_name, e["route"]
                     );
                 }
                 _ => warn!(
-                    "Line “{}” ({}) exists many times. Something is not right",
+                    "Route “{}” ({}) exists many times. Something is not right",
                     route.long_name, route.short_name
                 ),
             }
