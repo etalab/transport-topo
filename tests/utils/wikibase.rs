@@ -29,7 +29,7 @@ impl Wikibase {
             .sparql(
                 &["(COUNT(?x) as ?count)"],
                 &format!(
-                    "?x wdt:P3 wd:{}", // TODO remove the P3 hardcoding
+                    "?x wdt:P4 wd:{}", // TODO remove the P3 hardcoding
                     producer_id
                 ),
             )
@@ -46,8 +46,8 @@ impl Wikibase {
                 &["?gtfs_id"],
                 &format!(
                     // TODO remove the property id hardcoding
-                    r#"?x wdt:P3 wd:{}.
-                    ?x wdt:P7 ?gtfs_id"#, producer_id
+                    r#"?x wdt:P4 wd:{}.
+                    ?x wdt:P2 ?gtfs_id"#, producer_id
                 ),
             )
             .expect("invalid sparql query");

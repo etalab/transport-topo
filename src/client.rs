@@ -19,13 +19,21 @@ pub struct Properties {
     pub gtfs_short_name: String,
     pub gtfs_long_name: String,
     pub gtfs_id: String,
+    pub has_physical_mode: String,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Items {
     pub line: String,
     pub producer: String,
+    pub tramway: String,
+    pub subway: String,
+    pub railway: String,
     pub bus: String,
+    pub ferry: String,
+    pub cable_car: String,
+    pub gondola: String,
+    pub funicular: String,
 }
 
 pub struct Client {
@@ -37,7 +45,14 @@ impl EntitiesId {
     pub fn physical_mode(&self, route: &gtfs_structures::Route) -> &str {
         use gtfs_structures::RouteType::*;
         match route.route_type {
+            Tramway => &self.items.tramway,
+            Subway => &self.items.subway,
+            Rail => &self.items.railway,
             Bus => &self.items.bus,
+            Ferry => &self.items.ferry,
+            CableCar => &self.items.cable_car,
+            Gondola => &self.items.gondola,
+            Funicular => &self.items.funicular,
             _ => &self.items.bus,
         }
     }

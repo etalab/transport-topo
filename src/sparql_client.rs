@@ -47,7 +47,14 @@ impl SparqlClient {
             items: Items {
                 line: self.find_entity_by_topo_id("line")?,
                 producer: self.find_entity_by_topo_id("producer")?,
+                tramway: self.find_entity_by_topo_id("tramway")?,
+                subway: self.find_entity_by_topo_id("subway")?,
+                railway: self.find_entity_by_topo_id("railway")?,
                 bus: self.find_entity_by_topo_id("bus")?,
+                ferry: self.find_entity_by_topo_id("ferry")?,
+                cable_car: self.find_entity_by_topo_id("cable_car")?,
+                gondola: self.find_entity_by_topo_id("gondola")?,
+                funicular: self.find_entity_by_topo_id("funicular")?,
             },
             properties: Properties {
                 topo_id_id: self.config.properties.topo_id_id.to_string(),
@@ -57,6 +64,7 @@ impl SparqlClient {
                 gtfs_short_name: self.find_entity_by_topo_id("gtfs_short_name")?,
                 gtfs_long_name: self.find_entity_by_topo_id("gtfs_long_name")?,
                 gtfs_id: self.find_entity_by_topo_id("gtfs_id")?,
+                has_physical_mode: self.find_entity_by_topo_id("has_physical_mode")?,
             },
         })
     }
