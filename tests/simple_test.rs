@@ -2,7 +2,6 @@ mod utils;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
 use transit_topo::api_client::{ObjectType, PropertyDataType};
-use utils::wikibase::DataSourceItem;
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
     // we first check that our exists method cannot find a unknown object
@@ -103,10 +102,27 @@ fn simple_test() {
     import_gtfs(&docker);
 
     // there are 1 data sources with routes imported
-    let datasources = wikibase.get_producer_datasources_id("Q12");
-    assert_eq!(datasources.len(), 1);
+    let data_sources = wikibase.get_producer_datasources_id("Q12");
+    assert_eq!(data_sources.len(), 1);
 
-    let all_objects = wikibase.get_all_items_for_datasource(datasources.iter().next().unwrap());
+    let data_source_id = data_sources.iter().next().unwrap();
+
+    let data_source = wikibase.get_item_detail(data_source_id);
+
+    assert!(data_source
+        .label
+        .starts_with("Data source for Q12 - imported "));
+    assert!(data_source.properties[&wikibase.properties().source]
+        .value
+        .ends_with("tests/fixtures/gtfs.zip"));
+    assert!(!data_source.properties[&wikibase.properties().sha_256]
+        .value
+        .is_empty());
+    assert!(!data_source.properties[&wikibase.properties().tool_version]
+        .value
+        .is_empty());
+
+    let all_objects = wikibase.get_all_items_for_datasource(data_source_id);
     assert_eq!(all_objects.len(), 5);
 
     let find_by_gtfs_id = |gtfs_id: &str| {
@@ -120,31 +136,31 @@ fn simple_test() {
         ab.label,
         "Airport - Bullfrog – (bob the bus mapper)".to_owned()
     );
-    assert_eq!(ab.instance_of, "route".to_owned());
+    assert_eq!(ab.instance_of, "Route".to_owned());
 
     assert_eq!(
         find_by_gtfs_id("BFC")
             .expect("impossible to find obj")
             .instance_of,
-        "route".to_owned()
+        "Route".to_owned()
     );
     assert_eq!(
         find_by_gtfs_id("STBA")
             .expect("impossible to find obj")
             .instance_of,
-        "route".to_owned()
+        "Route".to_owned()
     );
     assert_eq!(
         find_by_gtfs_id("CITY")
             .expect("impossible to find obj")
             .instance_of,
-        "route".to_owned()
+        "Route".to_owned()
     );
     assert_eq!(
         find_by_gtfs_id("AAMV")
             .expect("impossible to find obj")
             .instance_of,
-        "route".to_owned()
+        "Route".to_owned()
     );
 
     // we reimport the gtfs
@@ -156,7 +172,7 @@ fn simple_test() {
     assert_eq!(new_datasources.len(), 2);
 
     let new_datasource: std::collections::BTreeSet<_> =
-        new_datasources.difference(&datasources).collect();
+        new_datasources.difference(&data_sources).collect();
     assert_eq!(new_datasource.len(), 1);
 
     let all_objects = wikibase.get_all_items_for_datasource(new_datasource.iter().next().unwrap());
@@ -167,5 +183,5 @@ fn simple_test() {
         ab.label,
         "Airport - Bullfrog – (bob the bus mapper)".to_owned()
     );
-    assert_eq!(ab.instance_of, "route".to_owned());
+    assert_eq!(ab.instance_of, "Route".to_owned());
 }

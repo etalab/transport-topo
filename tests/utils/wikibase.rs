@@ -5,8 +5,10 @@ use transit_topo::api_client::ObjectType;
 use transit_topo::sparql_client::read_id_from_url;
 
 pub struct Wikibase {
-    client: transit_topo::Client,
+    pub client: transit_topo::Client,
 }
+
+#[derive(Debug)]
 pub struct Property {
     pub id: String,
     // Note: the label can be empty, because the wikibase
@@ -16,6 +18,7 @@ pub struct Property {
     pub value: String,
 }
 
+#[derive(Debug)]
 pub struct Item {
     pub id: String,
     pub label: String,
@@ -38,6 +41,10 @@ impl Wikibase {
         }
     }
 
+    pub fn properties(&self) -> &transit_topo::client::Properties {
+        &self.client.sparql.config.properties
+    }
+
     pub fn exists(&self, object_type: ObjectType, entity: &str) -> bool {
         self.client
             .api
@@ -51,13 +58,14 @@ impl Wikibase {
             .client
             .sparql
             .sparql(
-                &["?value ?prop ?claimLabel ?itemLabel"],
+                &["?value ?valueLabel ?prop ?claimLabel ?itemLabel"],
                 &format!(
-                    r#"{} ?prop ?value;
+                    r#"wd:{} ?prop ?value;
                          rdfs:label ?itemLabel.
                         OPTIONAL {{
                             ?claim wikibase:directClaim ?prop.
                         }}
+                        MINUS {{ ?prop a owl:ObjectProperty. }}
                     "#,
                     item
                 ),
@@ -70,11 +78,13 @@ impl Wikibase {
             properties: r
                 .into_iter()
                 .map(|values| {
+                    let id = read_id_from_url(&values["prop"])
+                        .expect("impossible to extract id from url");
                     (
-                        values["prop"].clone(),
+                        id.clone(),
                         Property {
-                            id: values["prop"].clone(),
-                            label: Some(values["claimLabel"].clone()),
+                            id,
+                            label: values.get("claimLabel").cloned(),
                             value: values["value"].clone(),
                         },
                     )
@@ -126,9 +136,7 @@ impl Wikibase {
             .sparql(
                 &["?data_source"],
                 &format!(
-                    r#"
-                        ?data_source wdt:{produced_by} wd:{producer}.
-                    "#,
+                    "?data_source wdt:{produced_by} wd:{producer}.",
                     produced_by = prop.produced_by,
                     producer = producer_id
                 ),
