@@ -22,6 +22,9 @@ services:
   wdqs-proxy:
     ports:
       - "8989:80"
+  wdqs-updater:
+    environment:
+     - WAITING_POLL_TIME_IN_S=2
 
 volumes:
   mediawiki-mysql-data:

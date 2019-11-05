@@ -102,9 +102,45 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
                 PropertyDataType::Item,
                 topo_id.as_str(),
             )?,
+            first_seen_in: get_or_create_property(
+                &client,
+                "First seen in",
+                PropertyDataType::Item,
+                topo_id.as_str(),
+            )?,
+            data_source: get_or_create_property(
+                &client,
+                "Data source",
+                PropertyDataType::Item,
+                topo_id.as_str(),
+            )?,
+            source: get_or_create_property(
+                &client,
+                "Source", //Link to the raw file
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
+            file_format: get_or_create_property(
+                &client,
+                "File format",
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
+            sha_256: get_or_create_property(
+                &client,
+                "sha_256",
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
+            tool_version: get_or_create_property(
+                &client,
+                "Tool version",
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
         },
         items: Items {
-            line: get_or_create_item(&client, "Line", &[], topo_id.as_str())?,
+            route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
             tramway: get_or_create_item(
                 &client,

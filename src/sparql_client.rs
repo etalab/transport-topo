@@ -18,6 +18,13 @@ pub enum SparqlError {
     TopoInvalidId(String, String),
 }
 
+pub fn read_id_from_url(url: &str) -> Option<String> {
+    url.split('/')
+        .collect::<Vec<_>>()
+        .last()
+        .map(|id| id.to_string())
+}
+
 pub struct SparqlClient {
     client: reqwest::Client,
     endpoint: String,
@@ -45,7 +52,7 @@ impl SparqlClient {
     pub fn discover_config(&self) -> Result<EntitiesId, SparqlError> {
         Ok(EntitiesId {
             items: Items {
-                line: self.find_entity_by_topo_id("line")?,
+                route: self.find_entity_by_topo_id("route")?,
                 producer: self.find_entity_by_topo_id("producer")?,
                 tramway: self.find_entity_by_topo_id("tramway")?,
                 subway: self.find_entity_by_topo_id("subway")?,
@@ -64,7 +71,13 @@ impl SparqlClient {
                 gtfs_short_name: self.find_entity_by_topo_id("gtfs_short_name")?,
                 gtfs_long_name: self.find_entity_by_topo_id("gtfs_long_name")?,
                 gtfs_id: self.find_entity_by_topo_id("gtfs_id")?,
+                first_seen_in: self.find_entity_by_topo_id("first_seen_in")?,
+                data_source: self.find_entity_by_topo_id("data_source")?,
+                source: self.find_entity_by_topo_id("source")?,
+                file_format: self.find_entity_by_topo_id("file_format")?,
+                sha_256: self.find_entity_by_topo_id("sha_256")?,
                 has_physical_mode: self.find_entity_by_topo_id("has_physical_mode")?,
+                tool_version: self.find_entity_by_topo_id("tool_version")?,
             },
         })
     }
@@ -100,37 +113,39 @@ impl SparqlClient {
         Ok(result)
     }
 
-    pub fn find_line(
+    pub fn find_route(
         &self,
         producer_id: &str,
         gtfs_id: &str,
     ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
-        trace!("Finding line {} of producer {}", gtfs_id, producer_id);
+        trace!("Finding route {} of producer {}", gtfs_id, producer_id);
         self.sparql(
             &[
-                "?line",
-                "?lineLabel",
+                "?route",
+                "?routeLabel",
                 "?route_short_name",
                 "?route_long_name",
                 "?physical_mode",
                 "?gtfs_id",
             ],
             &format!(
-                "?line wdt:{instance_of} wd:{line}.
-    ?line wdt:{gtfs_id_prop} \"{gtfs_id}\".
-    ?line wdt:{producer_prop} wd:{producer_id}.
-    ?line wdt:{route_short_name} ?route_short_name.
-    ?line wdt:{route_long_name} ?route_long_name.
-    ?line wdt:{physical_mode} ?physical_mode.",
+                "?route wdt:{instance_of} wd:{route}.
+                 ?route wdt:{gtfs_id_prop} \"{gtfs_id}\".
+                 ?route wdt:{first_seen_in} ?data_source.
+                 ?data_source wdt:{producer_prop} wd:{producer_id}.
+                 ?route wdt:{route_short_name} ?route_short_name.
+                 ?route wdt:{route_long_name} ?route_long_name.
+                 ?route wdt:{physical_mode} ?physical_mode.",
                 instance_of = self.config.properties.instance_of,
-                line = self.config.items.line,
+                route = self.config.items.route,
                 gtfs_id_prop = self.config.properties.gtfs_id,
                 producer_prop = self.config.properties.produced_by,
                 route_short_name = self.config.properties.gtfs_short_name,
                 route_long_name = self.config.properties.gtfs_long_name,
                 physical_mode = self.config.properties.physical_mode,
+                first_seen_in = self.config.properties.first_seen_in,
                 gtfs_id = gtfs_id,
-                producer_id = producer_id
+                producer_id = producer_id,
             ),
         )
     }
@@ -153,10 +168,7 @@ impl SparqlClient {
             _ => Err(SparqlError::DuplicatedTopoId(item_topo_id.to_string())),
         })
         .and_then(|id| {
-            id.split('/')
-                .collect::<Vec<_>>()
-                .last()
-                .map(|id| id.to_string())
+            read_id_from_url(&id)
                 .ok_or_else(|| SparqlError::TopoInvalidId(id, item_topo_id.to_string()))
         })
     }
