@@ -54,142 +54,55 @@ fn get_or_create_property<'a>(
 
 pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<EntitiesId, Error> {
     let client = ApiClient::new(api_endpoint, Default::default())?;
-
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
+    let create_prop =
+        |label, prop_type| get_or_create_property(&client, label, prop_type, topo_id.as_str());
+
+    let gtfs_id = create_prop("GTFS id", PropertyDataType::String)?;
+    let instance_of = create_prop("Instance of", PropertyDataType::Item)?;
 
     let producer_class = get_or_create_item(&client, "Producer", &[], topo_id.as_str())?;
-    let gtfs_id = get_or_create_property(
-        &client,
-        "GTFS id",
-        PropertyDataType::String,
-        topo_id.as_str(),
-    )?;
     let physical_mode = get_or_create_item(&client, "Physical mode", &[], topo_id.as_str())?;
-    let instance_of = get_or_create_property(
-        &client,
-        "Instance of",
-        PropertyDataType::Item,
-        topo_id.as_str(),
-    )?;
-    let is_physical_mode_claim = claim_item(&instance_of, &physical_mode);
+
+    let create_mode = |label, id| {
+        get_or_create_item(
+            &client,
+            label,
+            &[
+                claim_item(&instance_of, &physical_mode),
+                claim_string(&gtfs_id, id),
+            ],
+            topo_id.as_str(),
+        )
+    };
     let config = EntitiesId {
         properties: Properties {
             topo_id_id: topo_id.to_owned(),
-            produced_by: get_or_create_property(
-                &client,
-                "Produced by",
-                PropertyDataType::Item,
-                topo_id.as_str(),
-            )?,
+            produced_by: create_prop("Produced by", PropertyDataType::Item)?,
             instance_of: instance_of.clone(),
             physical_mode: physical_mode.to_owned(),
-            gtfs_short_name: get_or_create_property(
-                &client,
-                "GTFS short name",
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
-            gtfs_long_name: get_or_create_property(
-                &client,
-                "GTFS long name",
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
+            gtfs_short_name: create_prop("GTFS short name", PropertyDataType::String)?,
+            gtfs_long_name: create_prop("GTFS long name", PropertyDataType::String)?,
             gtfs_id: gtfs_id.to_owned(),
-            has_physical_mode: get_or_create_property(
-                &client,
-                "Has physical mode",
-                PropertyDataType::Item,
-                topo_id.as_str(),
-            )?,
-            first_seen_in: get_or_create_property(
-                &client,
-                "First seen in",
-                PropertyDataType::Item,
-                topo_id.as_str(),
-            )?,
-            data_source: get_or_create_property(
-                &client,
-                "Data source",
-                PropertyDataType::Item,
-                topo_id.as_str(),
-            )?,
-            source: get_or_create_property(
-                &client,
-                "Source", //Link to the raw file
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
-            file_format: get_or_create_property(
-                &client,
-                "File format",
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
-            sha_256: get_or_create_property(
-                &client,
-                "sha_256",
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
-            tool_version: get_or_create_property(
-                &client,
-                "Tool version",
-                PropertyDataType::String,
-                topo_id.as_str(),
-            )?,
+            has_physical_mode: create_prop("Has physical mode", PropertyDataType::Item)?,
+            first_seen_in: create_prop("First seen in", PropertyDataType::Item)?,
+            data_source: create_prop("Data source", PropertyDataType::Item)?,
+            source: create_prop("Source", PropertyDataType::String)?, //Link to the raw file
+            file_format: create_prop("File format", PropertyDataType::String)?,
+            sha_256: create_prop("sha_256", PropertyDataType::String)?,
+            tool_version: create_prop("Tool version", PropertyDataType::String)?,
         },
         items: Items {
             route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
-            tramway: get_or_create_item(
-                &client,
-                "Tramway",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "0")],
-                topo_id.as_str(),
-            )?,
-            subway: get_or_create_item(
-                &client,
-                "Subway",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "1")],
-                topo_id.as_str(),
-            )?,
-            railway: get_or_create_item(
-                &client,
-                "Railway",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "2")],
-                topo_id.as_str(),
-            )?,
-            bus: get_or_create_item(
-                &client,
-                "Bus",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "3")],
-                topo_id.as_str(),
-            )?,
-            ferry: get_or_create_item(
-                &client,
-                "Ferry",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "4")],
-                topo_id.as_str(),
-            )?,
-            cable_car: get_or_create_item(
-                &client,
-                "Cable car",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "5")],
-                topo_id.as_str(),
-            )?,
-            gondola: get_or_create_item(
-                &client,
-                "Gondola",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "6")],
-                topo_id.as_str(),
-            )?,
-            funicular: get_or_create_item(
-                &client,
-                "Funicular",
-                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "7")],
-                topo_id.as_str(),
-            )?,
+            tramway: create_mode("Tramway", "0")?,
+            subway: create_mode("Subway", "1")?,
+            railway: create_mode("Railway", "2")?,
+            bus: create_mode("Bus", "3")?,
+            ferry: create_mode("Ferry", "4")?,
+            cable_car: create_mode("Cable car", "5")?,
+            gondola: create_mode("Gondola", "6")?,
+            funicular: create_mode("Funicular", "7")?,
         },
     };
     if default_producer {
