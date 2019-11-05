@@ -70,8 +70,8 @@ When the service is available, you can prepopulate the base (to add the mandator
 #### Import GTFS
 Once this is done, you can import the GTFS.
     
-For dev purpose, a mock producer has been added by the `prepopulate`: `Q4`.
+For dev purpose, a mock producer has been added by the `prepopulate`: `Q12`.
 
 So to import the GTFS run:
 
-    cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer Q4 -i <path to gtfs.zip>
+    cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer Q12 -i <path to gtfs.zip>
