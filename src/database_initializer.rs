@@ -117,25 +117,32 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
 
             file_link: get_or_create_property(
                 &client,
-                "file link", //Link to the raw file
+                "File link", //Link to the raw file
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
             file_format: get_or_create_property(
                 &client,
-                "file format",
+                "File format",
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
             content_id: get_or_create_property(
                 &client,
-                "content id", //Checksum of the file
+                "Content id", //Checksum of the file
+                PropertyDataType::String,
+                topo_id.as_str(),
+            )?,
+            tool_version: get_or_create_property(
+                &client,
+                "Tool version",
                 PropertyDataType::String,
                 topo_id.as_str(),
             )?,
         },
         items: Items {
             route: get_or_create_item(&client, "route", &[], topo_id.as_str())?,
+            producer: producer_class.to_owned(),
             tramway: get_or_create_item(
                 &client,
                 "Tramway",
@@ -181,7 +188,10 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             funicular: get_or_create_item(
                 &client,
                 "Funicular",
-	},
+                &[is_physical_mode_claim.clone(), claim_string(&gtfs_id, "7")],
+                topo_id.as_str(),
+            )?,
+        },
     };
     if default_producer {
         // we create a default producer, useful for tests purposes

@@ -25,6 +25,7 @@ pub struct Properties {
     pub file_format: String,
     pub content_id: String,
     pub has_physical_mode: String,
+    pub tool_version: String,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]

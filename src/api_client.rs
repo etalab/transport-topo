@@ -223,6 +223,7 @@ impl ApiClient {
             claim_item(&self.config.properties.produced_by, producer),
             claim_string(&self.config.properties.file_link, path),
             claim_string(&self.config.properties.file_format, "GTFS"),
+            claim_string(&self.config.properties.tool_version, crate::GIT_VERSION),
         ];
         if let Some(sha) = sha256 {
             claims.push(claim_string(&self.config.properties.content_id, sha));

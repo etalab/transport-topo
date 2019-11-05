@@ -77,6 +77,7 @@ impl SparqlClient {
                 file_format: self.find_entity_by_topo_id("file_format")?,
                 content_id: self.find_entity_by_topo_id("content_id")?,
                 has_physical_mode: self.find_entity_by_topo_id("has_physical_mode")?,
+                tool_version: self.find_entity_by_topo_id("tool_version")?,
             },
         })
     }
