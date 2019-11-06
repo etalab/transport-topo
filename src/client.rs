@@ -26,6 +26,10 @@ pub struct Properties {
     pub sha_256: String,
     pub has_physical_mode: String,
     pub tool_version: String,
+    /// Shows a relation of inclusion: a stop point is part_of a stop area
+    pub part_of: String,
+    /// Shows that a stop is connected to a line https://www.wikidata.org/wiki/Property:P81
+    pub connecting_line: String,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -40,6 +44,11 @@ pub struct Items {
     pub cable_car: String,
     pub gondola: String,
     pub funicular: String,
+    pub stop_point: String,
+    pub stop_area: String,
+    pub stop_entrance: String,
+    pub stop_boarding_area: String,
+    pub stop_generic_node: String,
 }
 
 pub struct Client {

@@ -62,6 +62,11 @@ impl SparqlClient {
                 cable_car: self.find_entity_by_topo_id("cable_car")?,
                 gondola: self.find_entity_by_topo_id("gondola")?,
                 funicular: self.find_entity_by_topo_id("funicular")?,
+                stop_point: self.find_entity_by_topo_id("stop_point")?,
+                stop_area: self.find_entity_by_topo_id("stop_area")?,
+                stop_entrance: self.find_entity_by_topo_id("stop_entrance")?,
+                stop_generic_node: self.find_entity_by_topo_id("stop_generic_node")?,
+                stop_boarding_area: self.find_entity_by_topo_id("stop_boarding_area")?,
             },
             properties: Properties {
                 topo_id_id: self.config.properties.topo_id_id.to_string(),
@@ -78,6 +83,8 @@ impl SparqlClient {
                 sha_256: self.find_entity_by_topo_id("sha_256")?,
                 has_physical_mode: self.find_entity_by_topo_id("has_physical_mode")?,
                 tool_version: self.find_entity_by_topo_id("tool_version")?,
+                part_of: self.find_entity_by_topo_id("part_of")?,
+                connecting_line: self.find_entity_by_topo_id("connecting_line")?,
             },
         })
     }
