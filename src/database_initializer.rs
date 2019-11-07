@@ -52,7 +52,7 @@ fn get_or_create_property<'a>(
     }
 }
 
-pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<EntitiesId, Error> {
+pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
     let client = ApiClient::new(api_endpoint, Default::default())?;
     let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
     let create_prop =
@@ -122,15 +122,6 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             stop_boarding_area: create_stop("Stop boarding area", "4")?,
         },
     };
-    if default_producer {
-        // we create a default producer, useful for tests purposes
-        get_or_create_item(
-            &client,
-            "bob the bus mapper",
-            &[claim_item(&instance_of, &producer_class)],
-            topo_id.as_str(),
-        )?;
-    }
 
     Ok(config)
 }

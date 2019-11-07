@@ -45,6 +45,10 @@ impl Wikibase {
         &self.client.sparql.config.properties
     }
 
+    pub fn items(&self) -> &transit_topo::client::Items {
+        &self.client.sparql.config.items
+    }
+
     pub fn exists(&self, object_type: ObjectType, entity: &str) -> bool {
         self.client
             .api

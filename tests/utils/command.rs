@@ -1,12 +1,16 @@
 use assert_cmd::cargo::CommandCargoExt;
 
-pub fn run(target: &str, args: &[&str]) {
+pub fn unchecked_run(target: &str, args: &[&str]) -> std::process::ExitStatus {
     log::info!("running {} {:?}", target, args);
-    let status = std::process::Command::cargo_bin(target)
+    std::process::Command::cargo_bin(target)
         .unwrap()
         .args(args)
         .status()
-        .unwrap();
+        .unwrap()
+}
+
+pub fn run(target: &str, args: &[&str]) {
+    let status = unchecked_run(target, args);
 
     assert!(status.success(), "`{}` failed {}", target, &status);
 

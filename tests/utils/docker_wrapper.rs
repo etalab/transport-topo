@@ -1,15 +1,5 @@
 use docker_compose::DockerComposition;
 
-fn init_log() {
-    if std::env::var("RUST_LOG").is_err() {
-        let mut builder = pretty_env_logger::formatted_builder();
-        builder.filter(None, log::LevelFilter::Info);
-        builder.init();
-    } else {
-        pretty_env_logger::init();
-    }
-}
-
 fn get_sparql_endpoint(c: &DockerComposition) -> String {
     let port = c
         .port("wdqs-proxy", 80)
@@ -45,7 +35,7 @@ pub struct DockerContainerWrapper {
 
 impl DockerContainerWrapper {
     pub fn new() -> Self {
-        init_log();
+        transit_topo::log::init();
         let docker_compose = DockerComposition::builder()
             .check(check_wqs)
             .check(check_wikibase)

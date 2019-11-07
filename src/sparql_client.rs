@@ -16,6 +16,8 @@ pub enum SparqlError {
     InvalidJsonError(#[from] json::Error),
     #[error("Error parsing the id {0} for entity with topo id {1}")]
     TopoInvalidId(String, String),
+    #[error("Too many elements {0}")]
+    Duplicate(String),
 }
 
 pub fn read_id_from_url(url: &str) -> Option<String> {
@@ -209,6 +211,42 @@ impl SparqlClient {
         .and_then(|id| {
             read_id_from_url(&id)
                 .ok_or_else(|| SparqlError::TopoInvalidId(id, item_topo_id.to_string()))
+        })
+    }
+
+    pub fn get_producer_label(&self, producer_id: &str) -> Result<Option<String>, SparqlError> {
+        self.sparql(
+            &["?label"],
+            &format!(
+                "wd:{producer_id} wdt:{instance_of} wd:{producer};
+                                  rdfs:label ?label.",
+                producer_id = producer_id,
+                instance_of = self.config.properties.instance_of,
+                producer = self.config.items.producer
+            ),
+        )
+        .and_then(|mut items| match items.as_mut_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.remove("label")),
+            _ => Err(SparqlError::Duplicate(producer_id.to_string())),
+        })
+    }
+
+    pub fn get_producer_id(&self, producer_label: &str) -> Result<Option<String>, SparqlError> {
+        self.sparql(
+            &["?producer"],
+            &format!(
+                r#"?producer wdt:{instance_of} wd:{producer};
+                           rdfs:label "{label}"@en "#,
+                label = producer_label,
+                instance_of = self.config.properties.instance_of,
+                producer = self.config.items.producer
+            ),
+        )
+        .and_then(|mut items| match items.as_mut_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.get("producer").and_then(|u| read_id_from_url(u))),
+            _ => Err(SparqlError::Duplicate(producer_label.to_string())),
         })
     }
 }
