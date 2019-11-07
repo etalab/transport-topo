@@ -89,7 +89,6 @@ pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
             topo_id_id: topo_id.to_owned(),
             produced_by: create_prop("Produced by", PropertyDataType::Item)?,
             instance_of: instance_of.clone(),
-            physical_mode: physical_mode.to_owned(),
             gtfs_short_name: create_prop("GTFS short name", PropertyDataType::String)?,
             gtfs_long_name: create_prop("GTFS long name", PropertyDataType::String)?,
             gtfs_name: create_prop("GTFS name", PropertyDataType::String)?,
@@ -105,6 +104,7 @@ pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
             connecting_line: create_prop("Connecting line", PropertyDataType::Item)?,
         },
         items: Items {
+            physical_mode: physical_mode.to_owned(),
             route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
             producer: producer_class.to_owned(),
             tramway: create_mode("Tramway", "0")?,

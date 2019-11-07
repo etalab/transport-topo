@@ -54,6 +54,7 @@ impl SparqlClient {
     pub fn discover_config(&self) -> Result<EntitiesId, SparqlError> {
         Ok(EntitiesId {
             items: Items {
+                physical_mode: self.find_entity_by_topo_id("physical_mode")?,
                 route: self.find_entity_by_topo_id("route")?,
                 producer: self.find_entity_by_topo_id("producer")?,
                 tramway: self.find_entity_by_topo_id("tramway")?,
@@ -74,7 +75,6 @@ impl SparqlClient {
                 topo_id_id: self.config.properties.topo_id_id.to_string(),
                 produced_by: self.find_entity_by_topo_id("produced_by")?,
                 instance_of: self.find_entity_by_topo_id("instance_of")?,
-                physical_mode: self.find_entity_by_topo_id("physical_mode")?,
                 gtfs_short_name: self.find_entity_by_topo_id("gtfs_short_name")?,
                 gtfs_long_name: self.find_entity_by_topo_id("gtfs_long_name")?,
                 gtfs_name: self.find_entity_by_topo_id("gtfs_name")?,
@@ -141,19 +141,19 @@ impl SparqlClient {
             &format!(
                 "?route wdt:{instance_of} wd:{route}.
                  ?route wdt:{gtfs_id_prop} \"{gtfs_id}\".
-                 ?route wdt:{first_seen_in} ?data_source.
+                 ?route wdt:{data_source} ?data_source.
                  ?data_source wdt:{producer_prop} wd:{producer_id}.
                  ?route wdt:{route_short_name} ?route_short_name.
                  ?route wdt:{route_long_name} ?route_long_name.
-                 ?route wdt:{physical_mode} ?physical_mode.",
+                 ?route wdt:{has_physical_mode} ?physical_mode.",
                 instance_of = self.config.properties.instance_of,
                 route = self.config.items.route,
                 gtfs_id_prop = self.config.properties.gtfs_id,
                 producer_prop = self.config.properties.produced_by,
                 route_short_name = self.config.properties.gtfs_short_name,
                 route_long_name = self.config.properties.gtfs_long_name,
-                physical_mode = self.config.properties.physical_mode,
-                first_seen_in = self.config.properties.first_seen_in,
+                has_physical_mode = self.config.properties.has_physical_mode,
+                data_source = self.config.properties.data_source,
                 gtfs_id = gtfs_id,
                 producer_id = producer_id,
             ),
@@ -176,7 +176,7 @@ impl SparqlClient {
             &format!(
                 "?stop wdt:{instance_of} wd:{stop_type}.
                  ?stop wdt:{gtfs_id_prop} \"{gtfs_id}\".
-                 ?stop wdt:{first_seen_in} ?data_source.
+                 ?stop wdt:{data_source} ?data_source.
                  ?data_source wdt:{producer_prop} wd:{producer_id}.
                  ?stop wdt:{gtfs_name} ?stop_name.",
                 instance_of = self.config.properties.instance_of,
@@ -184,7 +184,7 @@ impl SparqlClient {
                 gtfs_id_prop = self.config.properties.gtfs_id,
                 producer_prop = self.config.properties.produced_by,
                 gtfs_name = self.config.properties.gtfs_name,
-                first_seen_in = self.config.properties.first_seen_in,
+                data_source = self.config.properties.data_source,
                 gtfs_id = stop.id,
                 producer_id = producer_id,
             ),

@@ -15,7 +15,6 @@ pub struct Properties {
     pub topo_id_id: String,
     pub produced_by: String,
     pub instance_of: String,
-    pub physical_mode: String,
     pub gtfs_name: String,
     pub gtfs_short_name: String,
     pub gtfs_long_name: String,
@@ -35,6 +34,7 @@ pub struct Properties {
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Items {
+    pub physical_mode: String,
     pub route: String,
     pub producer: String,
     pub tramway: String,
@@ -191,9 +191,7 @@ impl Client {
         id_mapping: std::collections::HashMap<String, String>,
     ) -> Result<(), anyhow::Error> {
         for stop in stops {
-            println!("stop: {}", stop.id);
             if let Some(parent_gtfs_id) = &stop.parent_station {
-                println!("    parent {}", parent_gtfs_id);
                 let parent_wikibase_id = id_mapping.get(parent_gtfs_id).ok_or_else(|| {
                     anyhow!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id)
                 })?;
