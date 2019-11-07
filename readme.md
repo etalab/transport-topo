@@ -67,11 +67,25 @@ When the service is available, you can prepopulate the base (to add the mandator
 
     cargo run --release --bin prepopulate -- --api http://localhost:8181/api.php
 
+
+#### Data producer
+
+The idea is that each GTFS provider needs to have its own `producer` page in transit_topo.
+
+This way all data added by this `producer` will be attached to it.
+
+To create a producer, you can use the cli tool provided:
+
+    cargo run --release --bin producer -- create <name of the producer> --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql
+
+The cli tool will give you an ID. Note this id, it will be needed by the other cli tools.
+
+Note: if you forgot the id, you can call again the `producer create <name of the producer>` cli tool, it will not recreate a producer with the same label.
+
 #### Import GTFS
+
 Once this is done, you can import the GTFS.
     
-For dev purpose, a mock producer has been added by the `prepopulate`: `Q12`.
-
 So to import the GTFS run:
 
-    cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer Q12 -i <path to gtfs.zip>
+    cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer <id of the producer> -i <path to gtfs.zip>

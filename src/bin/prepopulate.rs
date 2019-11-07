@@ -12,6 +12,6 @@ fn main() {
     transit_topo::log::init();
 
     let opt = Opt::from_args();
-    transit_topo::database_initializer::initial_populate(&opt.api, true)
+    transit_topo::database_initializer::initial_populate(&opt.api)
         .expect("impossible to populate wikibase");
 }

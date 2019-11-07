@@ -1,6 +1,4 @@
-use log::{error, info, warn};
 use structopt::StructOpt;
-use transit_topo::api_client::ObjectType;
 use transit_topo::Client;
 
 #[derive(StructOpt, Debug)]
@@ -36,23 +34,15 @@ fn main() {
     let opt = Opt::from_args();
     let client = Client::new(&opt.api, &opt.sparql, &opt.topo_id_id).unwrap();
 
-    if opt.producer.starts_with('Q') {
-        info!("Searching the producer by id");
-        let producer_label = client
-            .api
-            .get_label(&opt.producer)
-            .expect("unable to find producer");
-        info!("Found the producer “{}”", &producer_label);
-        info!("Starting the importation of lines");
-        client
-            .import_gtfs(&opt.gtfs_filename, &opt.producer, &producer_label)
-            .expect("unable to import");
-    } else {
-        info!("Searching the producer by name");
-        match client.api.find_entity_id(ObjectType::Item, &opt.producer) {
-            Ok(None) => warn!("We found no producer with the name {}", opt.producer),
-            Ok(Some(id)) => info!("The following item match the search {}", id),
-            Err(error) => error!("Could not find the entity by name: {}", error),
-        }
-    }
+    log::info!("Searching the producer by id");
+    let producer_label = client
+        .sparql
+        .get_producer_label(&opt.producer)
+        .expect("unable to search for producer")
+        .unwrap_or_else(|| panic!("no producer with id {}", &opt.producer));
+    log::info!("Found the producer “{}”", &producer_label);
+    log::info!("Starting the importation of lines");
+    client
+        .import_gtfs(&opt.gtfs_filename, &opt.producer, &producer_label)
+        .expect("unable to import");
 }

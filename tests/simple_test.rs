@@ -30,55 +30,52 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
     assert!(wikibase.exists(ObjectType::Item, "producer"));
     assert!(wikibase.exists(ObjectType::Item, "route"));
     assert!(wikibase.exists(ObjectType::Item, "bus"));
-    assert!(wikibase.exists(ObjectType::Item, "bob the bus mapper"));
 
     // we check all the objects with a topo_id
     assert_eq!(
         wikibase.get_topo_objects(),
         btreeset![
-            "producer".to_owned(),
-            "route".to_owned(),
-            "bob_the_bus_mapper".to_owned(),
-            "instance_of".to_owned(),
-            "physical_mode".to_owned(),
-            "gtfs_short_name".to_owned(),
-            "gtfs_long_name".to_owned(),
-            "gtfs_id".to_owned(),
-            "produced_by".to_owned(),
-            "physical_mode".to_owned(),
-            "has_physical_mode".to_owned(),
-            "tramway".to_owned(),
-            "subway".to_owned(),
-            "railway".to_owned(),
             "bus".to_owned(),
-            "ferry".to_owned(),
             "cable_car".to_owned(),
-            "gondola".to_owned(),
-            "funicular".to_owned(),
-            "sha_256".to_owned(),
-            "data_source".to_owned(),
-            "file_format".to_owned(),
-            "source".to_owned(),
-            "first_seen_in".to_owned(),
-            "tool_version".to_owned(),
             "connecting_line".to_owned(),
+            "data_source".to_owned(),
+            "ferry".to_owned(),
+            "file_format".to_owned(),
+            "first_seen_in".to_owned(),
+            "funicular".to_owned(),
+            "gondola".to_owned(),
+            "gtfs_id".to_owned(),
+            "gtfs_long_name".to_owned(),
             "gtfs_name".to_owned(),
+            "gtfs_short_name".to_owned(),
+            "has_physical_mode".to_owned(),
+            "instance_of".to_owned(),
             "part_of".to_owned(),
+            "physical_mode".to_owned(),
+            "produced_by".to_owned(),
+            "producer".to_owned(),
+            "railway".to_owned(),
+            "route".to_owned(),
+            "sha_256".to_owned(),
+            "source".to_owned(),
             "stop_area".to_owned(),
             "stop_boarding_area".to_owned(),
             "stop_entrance".to_owned(),
             "stop_generic_node".to_owned(),
             "stop_point".to_owned(),
+            "subway".to_owned(),
+            "tool_version".to_owned(),
+            "tramway".to_owned(),
         ],
     );
 }
 
-fn import_gtfs(docker: &utils::DockerContainerWrapper) {
+fn import_gtfs(docker: &utils::DockerContainerWrapper, producer_id: &str) {
     utils::run(
         "import-gtfs",
         &[
             "--producer",
-            "Q17",
+            producer_id,
             "--input-gtfs",
             &format!(
                 "{}/tests/fixtures/gtfs.zip",
@@ -90,6 +87,32 @@ fn import_gtfs(docker: &utils::DockerContainerWrapper) {
             &docker.sparql_endpoint,
         ],
     );
+}
+
+fn create_producer(
+    label: &str,
+    wikibase: &utils::Wikibase,
+    docker: &utils::DockerContainerWrapper,
+) -> String {
+    utils::run(
+        "producer",
+        &[
+            "create",
+            label,
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
+        ],
+    );
+
+    // we then query the base to find the id of the newly inserted producer
+    let producer = wikibase
+        .client
+        .sparql
+        .get_producer_id(label)
+        .expect("impossible to find producer");
+    producer.expect("no producer found")
 }
 
 #[test]
@@ -106,11 +129,20 @@ fn simple_test() {
     utils::run("prepopulate", &["--api", &docker.api_endpoint]);
     check_initiale_state(&wikibase);
 
+    // we then need to add a producer
+    let producer_id = create_producer("bob the bus mapper", &wikibase, &docker);
+
+    // if we try to recreate the same producer, we should get the id of the old one
+    assert_eq!(
+        producer_id,
+        create_producer("bob the bus mapper", &wikibase, &docker)
+    );
+
     // we now import a gtfs
-    import_gtfs(&docker);
+    import_gtfs(&docker, &producer_id);
 
     // there are 1 data sources with routes imported
-    let data_sources = wikibase.get_producer_datasources_id("Q17");
+    let data_sources = wikibase.get_producer_datasources_id(&producer_id);
     assert_eq!(data_sources.len(), 1);
 
     let data_source_id = data_sources.iter().next().unwrap();
@@ -119,7 +151,7 @@ fn simple_test() {
 
     assert!(data_source
         .label
-        .starts_with("Data source for Q17 - imported "));
+        .starts_with(&format!("Data source for {} - imported ", &producer_id)));
     assert!(data_source.properties[&wikibase.properties().source]
         .value
         .ends_with("tests/fixtures/gtfs.zip"));
@@ -165,11 +197,11 @@ fn simple_test() {
     assert_eq!(instance_of("STAGECOACH"), "Stop boarding area");
 
     // we reimport the gtfs
-    import_gtfs(&docker);
+    import_gtfs(&docker, &producer_id);
 
     // there are now 2 datasources, because we do no merge.
     // It might change in the futur
-    let new_datasources = wikibase.get_producer_datasources_id("Q17");
+    let new_datasources = wikibase.get_producer_datasources_id(&producer_id);
     assert_eq!(new_datasources.len(), 2);
 
     let new_datasource: std::collections::BTreeSet<_> =
@@ -185,4 +217,42 @@ fn simple_test() {
         "Bus Airport - Bullfrog (bob the bus mapper)".to_owned()
     );
     assert_eq!(ab.instance_of, "Route".to_owned());
+
+    // check that giving an invalid producer id does not work
+    assert!(!utils::unchecked_run(
+        "import-gtfs",
+        &[
+            "--producer",
+            "Q12345", // this id does not exists
+            "--input-gtfs",
+            &format!(
+                "{}/tests/fixtures/gtfs.zip",
+                std::env::var("CARGO_MANIFEST_DIR").expect("impossible to find env var")
+            ),
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
+        ],
+    )
+    .success());
+
+    // same with a valid id, but not a producer
+    assert!(!utils::unchecked_run(
+        "import-gtfs",
+        &[
+            "--producer",
+            &wikibase.items().route, // 'route' exists in wikibase (add by the prepopulate), but it is not a producer
+            "--input-gtfs",
+            &format!(
+                "{}/tests/fixtures/gtfs.zip",
+                std::env::var("CARGO_MANIFEST_DIR").expect("impossible to find env var")
+            ),
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
+        ],
+    )
+    .success());
 }
