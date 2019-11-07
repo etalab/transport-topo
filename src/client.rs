@@ -1,6 +1,6 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use log::{info, warn};
 use serde::Deserialize;
 
@@ -110,7 +110,8 @@ impl Client {
         let routes = gtfs.routes.map_err(|e| e.compat())?;
         self.import_routes(&routes, &data_source_id, producer_id, producer_name)?;
         let stops = gtfs.stops.map_err(|e| e.compat())?;
-        self.import_stops(&stops, &data_source_id, producer_id)?;
+        let id_mapping = self.import_stops(&stops, &data_source_id, producer_id)?;
+        self.insert_stop_relations(&stops, id_mapping)?;
 
         Ok(())
     }
@@ -153,7 +154,8 @@ impl Client {
         stops: &[gtfs_structures::Stop],
         data_source_id: &str,
         producer_id: &str,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
+        let mut result = std::collections::HashMap::new();
         for stop in stops {
             let s = self.sparql.find_stop(&producer_id, &stop)?;
             match s.as_slice() {
@@ -162,21 +164,49 @@ impl Client {
                         "Stop “{}” ({}) does not exist, inserting",
                         stop.name, stop.id
                     );
-                    self.api.insert_stop(&stop, &data_source_id)?;
+                    let wikibase_id = self.api.insert_stop(&stop, &data_source_id)?;
+                    result.insert(stop.id.to_owned(), wikibase_id);
                 }
                 [e] => {
                     info!(
                         "Stop “{}” ({}) already exists with id {}, skipping",
-                        stop.name, stop.id, e["route"]
+                        stop.name, stop.id, e["stop"]
+                    );
+                    result.insert(stop.id.to_owned(), e["stop"].to_owned());
+                }
+                _ => {
+                    warn!(
+                        "Stop “{}” ({}) exists many times. Something is not right",
+                        stop.name, stop.id
                     );
                 }
-                _ => warn!(
-                    "Route “{}” ({}) exists many times. Something is not right",
-                    stop.name, stop.id
-                ),
             }
         }
+        Ok(result)
+    }
 
+    pub fn insert_stop_relations(
+        &self,
+        stops: &[gtfs_structures::Stop],
+        id_mapping: std::collections::HashMap<String, String>,
+    ) -> Result<(), anyhow::Error> {
+        for stop in stops {
+            println!("stop: {}", stop.id);
+            if let Some(parent_gtfs_id) = &stop.parent_station {
+                println!("    parent {}", parent_gtfs_id);
+                let parent_wikibase_id = id_mapping.get(parent_gtfs_id).ok_or_else(|| {
+                    anyhow!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id)
+                })?;
+                let child_wikibase_id = id_mapping.get(&stop.id).ok_or_else(|| {
+                    anyhow!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id)
+                })?;
+                let claim = crate::api_client::claim_item(
+                    &self.sparql.config.properties.part_of,
+                    parent_wikibase_id,
+                );
+                self.api.add_claims(child_wikibase_id, &[claim])?;
+            }
+        }
         Ok(())
     }
 }

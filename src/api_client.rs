@@ -292,6 +292,27 @@ impl ApiClient {
             .map(|l| l.to_owned())
             .ok_or_else(|| anyhow!("no entitity {}", &id))
     }
+
+    pub fn add_claims(&self, entity_id: &str, claims: &[json::JsonValue]) -> Result<(), ApiError> {
+        let claims = json::stringify(object! { "claims" => json::Array::from(claims)});
+        log::trace!("claims: {}", claims);
+        let mut res = self
+            .client
+            .post(&self.endpoint)
+            .query(&[
+                ("action", "wbeditentity"),
+                ("id", entity_id),
+                ("format", "json"),
+            ])
+            .form(&[("token", &self.token), ("data", &claims)])
+            .send()?;
+
+        log::trace!("Response headers: {:#?}", res);
+        let body = res.text()?;
+        log::trace!("Response body: {:#?}", body);
+        serde_json::from_str::<ApiResponse>(&body)?;
+        Ok(())
+    }
 }
 
 pub fn claim(property: &str, datavalue: json::JsonValue) -> json::JsonValue {
