@@ -209,7 +209,7 @@ fn simple_test() {
     assert_eq!(new_datasource.len(), 1);
 
     let all_objects = wikibase.get_all_items_for_datasource(new_datasource.iter().next().unwrap());
-    assert_eq!(all_objects.len(), 14);
+    assert_eq!(all_objects.len(), 0);
 
     let ab = find_by_gtfs_id("AB").expect(&format!("impossible to find AB"));
     assert_eq!(
@@ -255,4 +255,10 @@ fn simple_test() {
         ],
     )
     .success());
+
+    let bullfrog = find_by_gtfs_id("BULLFROG").expect(&format!("impossible to find BULLFROG"));
+    let fur_creek_res = find_by_gtfs_id("FUR_CREEK_RES").expect(&format!("impossible to find FUR_CREEK_RES"));
+    let bullfrog_details = wikibase.get_item_detail(&bullfrog.id);
+    println!("props: {:#?}", bullfrog_details.properties);
+    assert_eq!(bullfrog_details.properties[&wikibase.properties().part_of].value, fur_creek_res.id);
 }
