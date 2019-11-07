@@ -62,6 +62,11 @@ impl SparqlClient {
                 cable_car: self.find_entity_by_topo_id("cable_car")?,
                 gondola: self.find_entity_by_topo_id("gondola")?,
                 funicular: self.find_entity_by_topo_id("funicular")?,
+                stop_point: self.find_entity_by_topo_id("stop_point")?,
+                stop_area: self.find_entity_by_topo_id("stop_area")?,
+                stop_entrance: self.find_entity_by_topo_id("stop_entrance")?,
+                stop_generic_node: self.find_entity_by_topo_id("stop_generic_node")?,
+                stop_boarding_area: self.find_entity_by_topo_id("stop_boarding_area")?,
             },
             properties: Properties {
                 topo_id_id: self.config.properties.topo_id_id.to_string(),
@@ -70,6 +75,7 @@ impl SparqlClient {
                 physical_mode: self.find_entity_by_topo_id("physical_mode")?,
                 gtfs_short_name: self.find_entity_by_topo_id("gtfs_short_name")?,
                 gtfs_long_name: self.find_entity_by_topo_id("gtfs_long_name")?,
+                gtfs_name: self.find_entity_by_topo_id("gtfs_name")?,
                 gtfs_id: self.find_entity_by_topo_id("gtfs_id")?,
                 first_seen_in: self.find_entity_by_topo_id("first_seen_in")?,
                 data_source: self.find_entity_by_topo_id("data_source")?,
@@ -78,6 +84,8 @@ impl SparqlClient {
                 sha_256: self.find_entity_by_topo_id("sha_256")?,
                 has_physical_mode: self.find_entity_by_topo_id("has_physical_mode")?,
                 tool_version: self.find_entity_by_topo_id("tool_version")?,
+                part_of: self.find_entity_by_topo_id("part_of")?,
+                connecting_line: self.find_entity_by_topo_id("connecting_line")?,
             },
         })
     }
@@ -145,6 +153,37 @@ impl SparqlClient {
                 physical_mode = self.config.properties.physical_mode,
                 first_seen_in = self.config.properties.first_seen_in,
                 gtfs_id = gtfs_id,
+                producer_id = producer_id,
+            ),
+        )
+    }
+
+    pub fn find_stop(
+        &self,
+        producer_id: &str,
+        stop: &gtfs_structures::Stop,
+    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
+        trace!(
+            "Finding stop {} {} of producer {}",
+            stop.name,
+            stop.id,
+            producer_id
+        );
+        self.sparql(
+            &["?stop", "?stopLabel", "?stopName", "?gtfs_id"],
+            &format!(
+                "?stop wdt:{instance_of} wd:{stop_type}.
+                 ?stop wdt:{gtfs_id_prop} \"{gtfs_id}\".
+                 ?stop wdt:{first_seen_in} ?data_source.
+                 ?data_source wdt:{producer_prop} wd:{producer_id}.
+                 ?stop wdt:{gtfs_name} ?stop_name.",
+                instance_of = self.config.properties.instance_of,
+                stop_type = self.config.location_type(stop),
+                gtfs_id_prop = self.config.properties.gtfs_id,
+                producer_prop = self.config.properties.produced_by,
+                gtfs_name = self.config.properties.gtfs_name,
+                first_seen_in = self.config.properties.first_seen_in,
+                gtfs_id = stop.id,
                 producer_id = producer_id,
             ),
         )

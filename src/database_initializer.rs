@@ -75,6 +75,15 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             topo_id.as_str(),
         )
     };
+    let create_stop = |label, id| {
+        get_or_create_item(
+            &client,
+            label,
+            &[claim_string(&gtfs_id, id)],
+            topo_id.as_str(),
+        )
+    };
+
     let config = EntitiesId {
         properties: Properties {
             topo_id_id: topo_id.to_owned(),
@@ -83,6 +92,7 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             physical_mode: physical_mode.to_owned(),
             gtfs_short_name: create_prop("GTFS short name", PropertyDataType::String)?,
             gtfs_long_name: create_prop("GTFS long name", PropertyDataType::String)?,
+            gtfs_name: create_prop("GTFS name", PropertyDataType::String)?,
             gtfs_id: gtfs_id.to_owned(),
             has_physical_mode: create_prop("Has physical mode", PropertyDataType::Item)?,
             first_seen_in: create_prop("First seen in", PropertyDataType::Item)?,
@@ -91,6 +101,8 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             file_format: create_prop("File format", PropertyDataType::String)?,
             sha_256: create_prop("sha_256", PropertyDataType::String)?,
             tool_version: create_prop("Tool version", PropertyDataType::String)?,
+            part_of: create_prop("Part of", PropertyDataType::Item)?,
+            connecting_line: create_prop("Connecting line", PropertyDataType::Item)?,
         },
         items: Items {
             route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
@@ -103,6 +115,11 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             cable_car: create_mode("Cable car", "5")?,
             gondola: create_mode("Gondola", "6")?,
             funicular: create_mode("Funicular", "7")?,
+            stop_point: create_stop("Stop point", "0")?,
+            stop_area: create_stop("Stop area", "1")?,
+            stop_entrance: create_stop("Stop entrance", "2")?,
+            stop_generic_node: create_stop("Stop generic node", "3")?,
+            stop_boarding_area: create_stop("Stop boarding area", "4")?,
         },
     };
     if default_producer {
