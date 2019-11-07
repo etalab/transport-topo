@@ -134,7 +134,7 @@ fn simple_test() {
     let ab = find_by_gtfs_id("AB").expect(&format!("impossible to find AB"));
     assert_eq!(
         ab.label,
-        "Airport - Bullfrog – (bob the bus mapper)".to_owned()
+        "Bus Airport - Bullfrog (bob the bus mapper)".to_owned()
     );
     assert_eq!(ab.instance_of, "Route".to_owned());
 
@@ -181,7 +181,7 @@ fn simple_test() {
     let ab = find_by_gtfs_id("AB").expect(&format!("impossible to find AB"));
     assert_eq!(
         ab.label,
-        "Airport - Bullfrog – (bob the bus mapper)".to_owned()
+        "Bus Airport - Bullfrog (bob the bus mapper)".to_owned()
     );
     assert_eq!(ab.instance_of, "Route".to_owned());
 }
