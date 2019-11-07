@@ -61,6 +61,14 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
             "source".to_owned(),
             "first_seen_in".to_owned(),
             "tool_version".to_owned(),
+            "connecting_line".to_owned(),
+            "gtfs_name".to_owned(),
+            "part_of".to_owned(),
+            "stop_area".to_owned(),
+            "stop_boarding_area".to_owned(),
+            "stop_entrance".to_owned(),
+            "stop_generic_node".to_owned(),
+            "stop_point".to_owned(),
         ],
     );
 }
@@ -70,7 +78,7 @@ fn import_gtfs(docker: &utils::DockerContainerWrapper) {
         "import-gtfs",
         &[
             "--producer",
-            "Q12",
+            "Q17",
             "--input-gtfs",
             &format!(
                 "{}/tests/fixtures/gtfs.zip",
@@ -102,7 +110,7 @@ fn simple_test() {
     import_gtfs(&docker);
 
     // there are 1 data sources with routes imported
-    let data_sources = wikibase.get_producer_datasources_id("Q12");
+    let data_sources = wikibase.get_producer_datasources_id("Q17");
     assert_eq!(data_sources.len(), 1);
 
     let data_source_id = data_sources.iter().next().unwrap();
@@ -111,7 +119,7 @@ fn simple_test() {
 
     assert!(data_source
         .label
-        .starts_with("Data source for Q12 - imported "));
+        .starts_with("Data source for Q17 - imported "));
     assert!(data_source.properties[&wikibase.properties().source]
         .value
         .ends_with("tests/fixtures/gtfs.zip"));
@@ -123,7 +131,7 @@ fn simple_test() {
         .is_empty());
 
     let all_objects = wikibase.get_all_items_for_datasource(data_source_id);
-    assert_eq!(all_objects.len(), 5);
+    assert_eq!(all_objects.len(), 14);
 
     let find_by_gtfs_id = |gtfs_id: &str| {
         all_objects
@@ -138,37 +146,30 @@ fn simple_test() {
     );
     assert_eq!(ab.instance_of, "Route".to_owned());
 
-    assert_eq!(
-        find_by_gtfs_id("BFC")
+    let instance_of = |id| {
+        &find_by_gtfs_id(id)
             .expect("impossible to find obj")
-            .instance_of,
-        "Route".to_owned()
-    );
-    assert_eq!(
-        find_by_gtfs_id("STBA")
-            .expect("impossible to find obj")
-            .instance_of,
-        "Route".to_owned()
-    );
-    assert_eq!(
-        find_by_gtfs_id("CITY")
-            .expect("impossible to find obj")
-            .instance_of,
-        "Route".to_owned()
-    );
-    assert_eq!(
-        find_by_gtfs_id("AAMV")
-            .expect("impossible to find obj")
-            .instance_of,
-        "Route".to_owned()
-    );
+            .instance_of
+    };
+
+    for route in &["BFC", "STBA", "CITY", "AAMV"] {
+        assert_eq!(instance_of(route), "Route");
+    }
+
+    for stop in &["NADAV", "NANAA", "DADAN", "EMSI", "AMV"] {
+        assert_eq!(instance_of(stop), "Stop point");
+    }
+    assert_eq!(instance_of("FUR_CREEK_RES"), "Stop area");
+    assert_eq!(instance_of("BEATTY_AIRPORT"), "Stop entrance");
+    assert_eq!(instance_of("BULLFROG"), "Stop generic node");
+    assert_eq!(instance_of("STAGECOACH"), "Stop boarding area");
 
     // we reimport the gtfs
     import_gtfs(&docker);
 
     // there are now 2 datasources, because we do no merge.
     // It might change in the futur
-    let new_datasources = wikibase.get_producer_datasources_id("Q12");
+    let new_datasources = wikibase.get_producer_datasources_id("Q17");
     assert_eq!(new_datasources.len(), 2);
 
     let new_datasource: std::collections::BTreeSet<_> =
@@ -176,7 +177,7 @@ fn simple_test() {
     assert_eq!(new_datasource.len(), 1);
 
     let all_objects = wikibase.get_all_items_for_datasource(new_datasource.iter().next().unwrap());
-    assert_eq!(all_objects.len(), 5);
+    assert_eq!(all_objects.len(), 14);
 
     let ab = find_by_gtfs_id("AB").expect(&format!("impossible to find AB"));
     assert_eq!(

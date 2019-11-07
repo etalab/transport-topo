@@ -79,6 +79,8 @@ impl EntitiesId {
             StopPoint => &self.items.stop_point,
             StopArea => &self.items.stop_area,
             StationEntrance => &self.items.stop_entrance,
+            GenericNode => &self.items.stop_generic_node,
+            BoardingArea => &self.items.stop_boarding_area,
         }
     }
 }
