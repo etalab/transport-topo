@@ -262,6 +262,24 @@ impl ApiClient {
         self.create_object(ObjectType::Item, &label, &claims)
     }
 
+    pub fn insert_stop(
+        &self,
+        stop: &gtfs_structures::Stop,
+        data_source_id: &str,
+    ) -> Result<String, ApiError> {
+        let claims = [
+            claim_item(
+                &self.config.properties.instance_of,
+                &self.config.location_type(stop),
+            ),
+            claim_string(&self.config.properties.gtfs_id, &stop.id),
+            claim_item(&self.config.properties.data_source, data_source_id),
+            claim_string(&self.config.properties.gtfs_name, &stop.name),
+        ];
+
+        self.create_object(ObjectType::Item, &stop.name, &claims)
+    }
+
     pub fn get_label(&self, id: &str) -> Result<String, anyhow::Error> {
         let res = self
             .get()

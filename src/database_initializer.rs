@@ -92,6 +92,7 @@ pub fn initial_populate(api_endpoint: &str, default_producer: bool) -> Result<En
             physical_mode: physical_mode.to_owned(),
             gtfs_short_name: create_prop("GTFS short name", PropertyDataType::String)?,
             gtfs_long_name: create_prop("GTFS long name", PropertyDataType::String)?,
+            gtfs_name: create_prop("GTFS name", PropertyDataType::String)?,
             gtfs_id: gtfs_id.to_owned(),
             has_physical_mode: create_prop("Has physical mode", PropertyDataType::Item)?,
             first_seen_in: create_prop("First seen in", PropertyDataType::Item)?,

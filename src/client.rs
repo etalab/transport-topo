@@ -16,6 +16,7 @@ pub struct Properties {
     pub produced_by: String,
     pub instance_of: String,
     pub physical_mode: String,
+    pub gtfs_name: String,
     pub gtfs_short_name: String,
     pub gtfs_long_name: String,
     pub gtfs_id: String,
@@ -71,6 +72,15 @@ impl EntitiesId {
             _ => &self.items.bus,
         }
     }
+
+    pub fn location_type(&self, stop: &gtfs_structures::Stop) -> &str {
+        use gtfs_structures::LocationType::*;
+        match stop.location_type {
+            StopPoint => &self.items.stop_point,
+            StopArea => &self.items.stop_area,
+            StationEntrance => &self.items.stop_entrance,
+        }
+    }
 }
 
 impl Client {
@@ -90,12 +100,26 @@ impl Client {
     ) -> Result<(), anyhow::Error> {
         let gtfs = gtfs_structures::RawGtfs::from_zip(gtfs_filename).map_err(|e| e.compat())?;
 
-        let routes = gtfs.routes.map_err(|e| e.compat())?;
         log::info!("import gtfs version {}", crate::GIT_VERSION);
         let data_source_id =
             self.api
                 .insert_data_source(&gtfs.sha256, &producer_id, gtfs_filename)?;
 
+        let routes = gtfs.routes.map_err(|e| e.compat())?;
+        self.import_routes(&routes, &data_source_id, producer_id, producer_name)?;
+        let stops = gtfs.stops.map_err(|e| e.compat())?;
+        self.import_stops(&stops, &data_source_id, producer_id)?;
+
+        Ok(())
+    }
+
+    pub fn import_routes(
+        &self,
+        routes: &[gtfs_structures::Route],
+        data_source_id: &str,
+        producer_id: &str,
+        producer_name: &str,
+    ) -> Result<(), anyhow::Error> {
         for route in routes {
             let r = self.sparql.find_route(&producer_id, &route.id)?;
             match r.as_slice() {
@@ -119,6 +143,38 @@ impl Client {
                 ),
             }
         }
+        Ok(())
+    }
+
+    pub fn import_stops(
+        &self,
+        stops: &[gtfs_structures::Stop],
+        data_source_id: &str,
+        producer_id: &str,
+    ) -> Result<(), anyhow::Error> {
+        for stop in stops {
+            let s = self.sparql.find_stop(&producer_id, &stop)?;
+            match s.as_slice() {
+                [] => {
+                    info!(
+                        "Stop “{}” ({}) does not exist, inserting",
+                        stop.name, stop.id
+                    );
+                    self.api.insert_stop(&stop, &data_source_id)?;
+                }
+                [e] => {
+                    info!(
+                        "Stop “{}” ({}) already exists with id {}, skipping",
+                        stop.name, stop.id, e["route"]
+                    );
+                }
+                _ => warn!(
+                    "Route “{}” ({}) exists many times. Something is not right",
+                    stop.name, stop.id
+                ),
+            }
+        }
+
         Ok(())
     }
 }
