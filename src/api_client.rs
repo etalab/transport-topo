@@ -243,7 +243,7 @@ impl ApiClient {
         } else {
             route.short_name.as_str()
         };
-        let label = format!("{} – ({})", route_name, producer_name);
+        let label = format!("{:?} {} ({})", route.route_type, route_name, producer_name);
         let claims = [
             claim_item(
                 &self.config.properties.instance_of,
