@@ -7,13 +7,12 @@ pub struct EntityResponse {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Value {
-    pub id: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Datavalue {
-    pub value: Value,
+#[serde(tag = "type", content = "value")]
+pub enum Datavalue {
+    #[serde(rename = "string")]
+    String(String),
+    #[serde(rename = "wikibase-entityid")]
+    Item { id: String },
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,8 +34,9 @@ pub struct Label {
 #[derive(Deserialize, Debug)]
 pub struct Entity {
     pub id: String,
-    pub claims: HashMap<String, Vec<Claim>>,
-    pub labels: HashMap<String, Label>,
+    pub claims: Option<HashMap<String, Vec<Claim>>>,
+    pub labels: Option<HashMap<String, Label>>,
+    pub missing: Option<String>, // if not None, the object does not exists
 }
 
 #[derive(Deserialize, Debug)]

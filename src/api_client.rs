@@ -1,7 +1,9 @@
 use crate::api_structures::*;
+use crate::entity;
 use anyhow::anyhow;
 use json::object;
 use regex::Regex;
+use std::collections::HashMap;
 use thiserror::Error;
 
 const WIKIBASE_LABEL_CONFLICT: &str = "wikibase-validator-label-conflict";
@@ -20,6 +22,8 @@ pub enum ApiError {
     InvalidProducer(String),
     #[error("Several items with label {0}")]
     TooManyItems(String),
+    #[error("Cannot find entiy {0}")]
+    EntityNotFound(String),
     #[error("error: {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("error: {0}")]
@@ -116,6 +120,49 @@ impl ApiClient {
                 [e] => Ok(Some(e.id.clone())),
                 _ => Err(ApiError::TooManyItems(label.to_owned())),
             })
+    }
+
+    /// search for all entities for a given english label
+    pub fn get_entity(&self, id: &str) -> Result<entity::Entity, ApiError> {
+        let mut res: EntityResponse = self
+            .get()
+            .query(&[("action", "wbgetentities"), ("ids", id)])
+            .send()?
+            .json()?;
+
+        // the id is always here is the api response (even if the object does not exists)
+        let r = res.entities.remove(id).ok_or_else(|| {
+            ApiError::GenericError("invalid response format, no id in resposne".to_owned())
+        })?;
+
+        if r.missing.is_some() {
+            Err(ApiError::EntityNotFound(id.to_owned()))
+        } else {
+            Ok(entity::Entity {
+                id: r.id,
+                label: r
+                    .labels
+                    .and_then(|mut l| l.remove("en"))
+                    .map(|l| l.value)
+                    .ok_or_else(|| ApiError::GenericError("invalid api response".to_owned()))?,
+                properties: r
+                    .claims
+                    .unwrap()
+                    .into_iter()
+                    .map(|(prop_id, claims)| {
+                        let claim = claims.into_iter().next().ok_or_else(|| {
+                            ApiError::GenericError("invalid response, no claims".to_owned())
+                        })?;
+                        let data_value = claim.mainsnak.datavalue;
+                        let val = match data_value {
+                            Datavalue::String(s) => entity::PropertyValue::String(s),
+                            Datavalue::Item { id } => entity::PropertyValue::Item(id),
+                        };
+                        Ok((prop_id, val))
+                    })
+                    .collect::<Result<HashMap<String, entity::PropertyValue>, ApiError>>()?,
+            })
+        }
     }
 
     pub fn create_object(
