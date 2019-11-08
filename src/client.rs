@@ -192,12 +192,20 @@ impl Client {
     ) -> Result<(), anyhow::Error> {
         for stop in stops {
             if let Some(parent_gtfs_id) = &stop.parent_station {
-                let parent_wikibase_id = id_mapping.get(parent_gtfs_id).ok_or_else(|| {
-                    anyhow!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id)
-                })?;
-                let child_wikibase_id = id_mapping.get(&stop.id).ok_or_else(|| {
-                    anyhow!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id)
-                })?;
+                let parent_wikibase_id = match id_mapping.get(parent_gtfs_id) {
+                    Some(id) => id,
+                    None => {
+                        log::warn!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id);
+                        continue;
+                    }
+                };
+                let child_wikibase_id = match id_mapping.get(&stop.id) {
+                    Some(id) => id,
+                    None => {
+                        log::warn!("Could not find wikibase id for gtfs id: {}", parent_gtfs_id);
+                        continue;
+                    }
+                };
                 let claim = crate::api_client::claim_item(
                     &self.sparql.config.properties.part_of,
                     parent_wikibase_id,
