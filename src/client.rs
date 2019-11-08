@@ -1,6 +1,6 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use log::{info, warn};
 use serde::Deserialize;
 
@@ -155,34 +155,34 @@ impl Client {
         data_source_id: &str,
         producer_id: &str,
     ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
-        let mut result = std::collections::HashMap::new();
-        for stop in stops {
-            let s = self.sparql.find_stop(&producer_id, &stop)?;
-            match s.as_slice() {
-                [] => {
-                    info!(
-                        "Stop “{}” ({}) does not exist, inserting",
-                        stop.name, stop.id
-                    );
-                    let wikibase_id = self.api.insert_stop(&stop, &data_source_id)?;
-                    result.insert(stop.id.to_owned(), wikibase_id);
-                }
-                [e] => {
-                    info!(
-                        "Stop “{}” ({}) already exists with id {}, skipping",
-                        stop.name, stop.id, e["stop"]
-                    );
-                    result.insert(stop.id.to_owned(), e["stop"].to_owned());
-                }
-                _ => {
-                    warn!(
+        stops
+            .iter()
+            .map(|stop| {
+                let s = self.sparql.find_stop(&producer_id, &stop)?;
+                match s.as_slice() {
+                    [] => {
+                        info!(
+                            "Stop “{}” ({}) does not exist, inserting",
+                            stop.name, stop.id
+                        );
+                        let wikibase_id = self.api.insert_stop(&stop, &data_source_id)?;
+                        Ok((stop.id.to_owned(), wikibase_id))
+                    }
+                    [e] => {
+                        info!(
+                            "Stop “{}” ({}) already exists with id {}, skipping",
+                            stop.name, stop.id, e["stop"]
+                        );
+                        Ok((stop.id.to_owned(), e["stop"].to_owned()))
+                    }
+                    _ => Err(anyhow::anyhow!(
                         "Stop “{}” ({}) exists many times. Something is not right",
-                        stop.name, stop.id
-                    );
+                        stop.name,
+                        stop.id
+                    )),
                 }
-            }
-        }
-        Ok(result)
+            })
+            .collect()
     }
 
     pub fn insert_stop_relations(
