@@ -100,7 +100,7 @@ impl Client {
         producer_id: &str,
         producer_name: &str,
     ) -> Result<(), anyhow::Error> {
-        let gtfs = gtfs_structures::RawGtfs::from_zip(gtfs_filename).map_err(|e| e.compat())?;
+        let gtfs = gtfs_structures::RawGtfs::new(gtfs_filename).map_err(|e| e.compat())?;
 
         log::info!("import gtfs version {}", crate::GIT_VERSION);
         let data_source_id =
