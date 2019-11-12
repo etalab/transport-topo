@@ -20,7 +20,24 @@ enum Opt {
         /// Endpoint of the sparql query serive
         #[structopt(short, long)]
         sparql: String,
+
+        /// Extra claim with the form P42:foobar. Can be repeated
+        #[structopt(short, long = "claim")]
+        claims: Vec<String>,
     },
+}
+
+fn parse_claims(claims: &[String]) -> Result<Vec<json::JsonValue>, anyhow::Error> {
+    let re = regex::Regex::new(r"^(P\d+):(.*)$")?;
+    claims
+        .iter()
+        .map(|claim| {
+            let captures = re
+                .captures(&claim)
+                .ok_or_else(|| anyhow::anyhow!("Could not parse claim {}", claim))?;
+            Ok(crate::api_client::claim_string(&captures[1], &captures[2]))
+        })
+        .collect()
 }
 
 fn create_producer(
@@ -28,6 +45,7 @@ fn create_producer(
     topo_id_id: &str,
     api: &str,
     sparql: &str,
+    claims: &[String],
 ) -> Result<String, anyhow::Error> {
     let client = Client::new(api, sparql, topo_id_id)?;
 
@@ -39,11 +57,12 @@ fn create_producer(
         }
         None => {
             log::info!("no producer \"{}\" exists, creating one", label);
+            let mut claims = parse_claims(claims)?;
             let entities_id = &client.sparql.config;
-            let claims = [api_client::claim_item(
+            claims.push(api_client::claim_item(
                 &entities_id.properties.instance_of,
                 &entities_id.items.producer,
-            )];
+            ));
             let id = client.api.create_item(label, &claims)?;
             log::info!("creating producer \"{}\" with id {}", label, id);
             Ok(id.to_owned())
@@ -62,8 +81,9 @@ fn main() {
             topo_id_id,
             api,
             sparql,
+            claims,
         } => {
-            let id = create_producer(&label, &topo_id_id, &api, &sparql)
+            let id = create_producer(&label, &topo_id_id, &api, &sparql, &claims)
                 .expect("impossible to create producer");
             log::info!("producer id: {}", id);
         }
