@@ -62,7 +62,7 @@ impl std::string::ToString for ObjectType {
 
 pub struct ApiClient {
     client: reqwest::Client,
-    config: crate::client::EntitiesId,
+    pub config: crate::client::EntitiesId,
     endpoint: String,
     token: String,
 }

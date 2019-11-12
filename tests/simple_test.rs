@@ -119,14 +119,30 @@ fn create_producer(
 fn simple_test() {
     let docker = utils::DockerContainerWrapper::new();
 
-    utils::run("prepopulate", &["--api", &docker.api_endpoint]);
+    utils::run(
+        "prepopulate",
+        &[
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
+        ],
+    );
 
     let wikibase = utils::Wikibase::new(&docker);
     check_initiale_state(&wikibase);
 
     // We call again the prepopulate, there shouldn't be any differences
     // since it should be idempotent
-    utils::run("prepopulate", &["--api", &docker.api_endpoint]);
+    utils::run(
+        "prepopulate",
+        &[
+            "--api",
+            &docker.api_endpoint,
+            "--sparql",
+            &docker.sparql_endpoint,
+        ],
+    );
     check_initiale_state(&wikibase);
 
     // we then need to add a producer

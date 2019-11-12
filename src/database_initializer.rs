@@ -1,35 +1,61 @@
 use crate::api_client::{
     claim_item, claim_string, ApiClient, ApiError, ObjectType, PropertyDataType,
 };
-use crate::client::{EntitiesId, Items, Properties};
+use crate::client::{Client, EntitiesId, Items, Properties};
 use anyhow::Error;
 use inflector::Inflector;
 
 // insert item if not already there, and return its id
-fn get_or_create_item<'a>(
-    client: &ApiClient,
+fn get_or_create_item(
+    client: &Client,
     label: &str,
     claims: &[json::JsonValue],
-    topo_id_id: impl Into<Option<&'a str>>,
 ) -> Result<String, Error> {
     let mut claims = Vec::from(claims);
-    if let Some(id) = topo_id_id.into() {
-        claims.push(claim_string(id, &label.to_snake_case()))
-    };
+    let topo_id = label.to_snake_case();
+    claims.push(claim_string(
+        client.api.config.properties.topo_id_id.as_str(),
+        &topo_id,
+    ));
 
     // for an item, we need to do a separate query to check if the item is already there
-    let id = if let Some(id) = client.find_entity_id(ObjectType::Item, label)? {
+    let id = if let Some(id) = client.sparql.get_id_by_topo_id(&topo_id)? {
         log::info!("item \"{}\" already exists with id {}", label, id);
         id
     } else {
-        let id = client.create_item(label, &claims)?;
+        let id = client.api.create_item(label, &claims)?;
         log::info!("creating item \"{}\" with id {}", label, id);
         id
     };
     Ok(id.to_owned())
 }
 
-fn get_or_create_property<'a>(
+fn get_or_create_property(
+    api: &ApiClient,
+    label: &str,
+    prop_type: PropertyDataType,
+) -> Result<String, Error> {
+    get_or_create_property_impl(
+        api,
+        label,
+        prop_type,
+        api.config.properties.topo_id_id.as_str(),
+    )
+}
+
+fn get_or_create_topo_id_id(client: &mut Client) -> Result<String, Error> {
+    let topo_id =
+        get_or_create_property_impl(&client.api, "Topo tools id", PropertyDataType::String, None)?;
+
+    // the topo id is a bit special, once we get its id, we set it in the configuration as it will be needed
+    // for the creation of all the other properties/items
+    client.sparql.config.properties.topo_id_id = topo_id.clone();
+    client.api.config.properties.topo_id_id = topo_id.clone();
+
+    Ok(topo_id)
+}
+
+fn get_or_create_property_impl<'a>(
     client: &ApiClient,
     label: &str,
     prop_type: PropertyDataType,
@@ -52,17 +78,17 @@ fn get_or_create_property<'a>(
     }
 }
 
-pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
-    let client = ApiClient::new(api_endpoint, Default::default())?;
-    let topo_id = get_or_create_property(&client, "Topo tools id", PropertyDataType::String, None)?;
-    let create_prop =
-        |label, prop_type| get_or_create_property(&client, label, prop_type, topo_id.as_str());
+pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<EntitiesId, Error> {
+    let mut client = Client::new_without_config(api_endpoint, sparql_endpoint)?;
+    let topo_id = get_or_create_topo_id_id(&mut client)?;
+
+    let create_prop = |label, prop_type| get_or_create_property(&client.api, label, prop_type);
 
     let gtfs_id = create_prop("GTFS id", PropertyDataType::String)?;
     let instance_of = create_prop("Instance of", PropertyDataType::Item)?;
 
-    let producer_class = get_or_create_item(&client, "Producer", &[], topo_id.as_str())?;
-    let physical_mode = get_or_create_item(&client, "Physical mode", &[], topo_id.as_str())?;
+    let producer_class = get_or_create_item(&client, "Producer", &[])?;
+    let physical_mode = get_or_create_item(&client, "Physical mode", &[])?;
 
     let create_mode = |label, id| {
         get_or_create_item(
@@ -72,17 +98,9 @@ pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
                 claim_item(&instance_of, &physical_mode),
                 claim_string(&gtfs_id, id),
             ],
-            topo_id.as_str(),
         )
     };
-    let create_stop = |label, id| {
-        get_or_create_item(
-            &client,
-            label,
-            &[claim_string(&gtfs_id, id)],
-            topo_id.as_str(),
-        )
-    };
+    let create_stop = |label, id| get_or_create_item(&client, label, &[claim_string(&gtfs_id, id)]);
 
     let config = EntitiesId {
         properties: Properties {
@@ -105,7 +123,7 @@ pub fn initial_populate(api_endpoint: &str) -> Result<EntitiesId, Error> {
         },
         items: Items {
             physical_mode: physical_mode.to_owned(),
-            route: get_or_create_item(&client, "Route", &[], topo_id.as_str())?,
+            route: get_or_create_item(&client, "Route", &[])?,
             producer: producer_class.to_owned(),
             tramway: create_mode("Tramway", "0")?,
             subway: create_mode("Subway", "1")?,
