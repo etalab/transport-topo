@@ -147,20 +147,16 @@ fn simple_test() {
 
     let data_source_id = data_sources.iter().next().unwrap();
 
-    let data_source = wikibase.get_item_detail(data_source_id);
+    let data_source = wikibase.get_entity(data_source_id);
 
     assert!(data_source
         .label
         .starts_with(&format!("Data source for {} - imported ", &producer_id)));
-    assert!(data_source.properties[&wikibase.properties().source]
-        .value
-        .ends_with("tests/fixtures/gtfs.zip"));
-    assert!(!data_source.properties[&wikibase.properties().sha_256]
-        .value
-        .is_empty());
-    assert!(!data_source.properties[&wikibase.properties().tool_version]
-        .value
-        .is_empty());
+    assert!(
+        data_source.properties[&wikibase.properties().source].ends_with("tests/fixtures/gtfs.zip")
+    );
+    assert!(!data_source.properties[&wikibase.properties().sha_256].is_empty());
+    assert!(!data_source.properties[&wikibase.properties().tool_version].is_empty());
 
     let all_objects = wikibase.get_all_items_for_datasource(data_source_id);
     assert_eq!(all_objects.len(), 14);
@@ -209,7 +205,7 @@ fn simple_test() {
     assert_eq!(new_datasource.len(), 1);
 
     let all_objects = wikibase.get_all_items_for_datasource(new_datasource.iter().next().unwrap());
-    assert_eq!(all_objects.len(), 14);
+    assert_eq!(all_objects.len(), 0);
 
     let ab = find_by_gtfs_id("AB").expect(&format!("impossible to find AB"));
     assert_eq!(
@@ -255,4 +251,14 @@ fn simple_test() {
         ],
     )
     .success());
+
+    let bullfrog = find_by_gtfs_id("BULLFROG").expect(&format!("impossible to find BULLFROG"));
+    let fur_creek_res =
+        find_by_gtfs_id("FUR_CREEK_RES").expect(&format!("impossible to find FUR_CREEK_RES"));
+    let bullfrog_details = wikibase.get_entity(&bullfrog.id);
+    println!("props: {:#?}", bullfrog_details.properties);
+    assert_eq!(
+        bullfrog_details.properties[&wikibase.properties().part_of].value(),
+        fur_creek_res.id
+    );
 }

@@ -1,28 +1,11 @@
 //! Some utilities wikibase queries to ease tests
 use crate::utils::DockerContainerWrapper;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use transit_topo::api_client::ObjectType;
 use transit_topo::sparql_client::read_id_from_url;
 
 pub struct Wikibase {
     pub client: transit_topo::Client,
-}
-
-#[derive(Debug)]
-pub struct Property {
-    pub id: String,
-    // Note: the label can be empty, because the wikibase
-    // default properties have no label
-    pub label: Option<String>,
-
-    pub value: String,
-}
-
-#[derive(Debug)]
-pub struct Item {
-    pub id: String,
-    pub label: String,
-    pub properties: HashMap<String, Property>,
 }
 
 #[derive(Hash, Debug, Ord, PartialOrd, Eq, PartialEq)]
@@ -57,44 +40,11 @@ impl Wikibase {
             .is_some()
     }
 
-    pub fn get_item_detail(&self, item: &str) -> Item {
-        let r = self
-            .client
-            .sparql
-            .sparql(
-                &["?value ?valueLabel ?prop ?claimLabel ?itemLabel"],
-                &format!(
-                    r#"wd:{} ?prop ?value;
-                         rdfs:label ?itemLabel.
-                        OPTIONAL {{
-                            ?claim wikibase:directClaim ?prop.
-                        }}
-                        MINUS {{ ?prop a owl:ObjectProperty. }}
-                    "#,
-                    item
-                ),
-            )
-            .expect("invalid sparql query");
-
-        Item {
-            id: item.to_owned(),
-            label: r[0]["itemLabel"].clone(),
-            properties: r
-                .into_iter()
-                .map(|values| {
-                    let id = read_id_from_url(&values["prop"])
-                        .expect("impossible to extract id from url");
-                    (
-                        id.clone(),
-                        Property {
-                            id,
-                            label: values.get("claimLabel").cloned(),
-                            value: values["value"].clone(),
-                        },
-                    )
-                })
-                .collect(),
-        }
+    pub fn get_entity(&self, item: &str) -> transit_topo::entity::Entity {
+        self.client
+            .api
+            .get_entity(item)
+            .expect("impossible to find entity")
     }
 
     pub fn get_all_items_for_datasource(&self, data_source_id: &str) -> BTreeSet<DataSourceItem> {
