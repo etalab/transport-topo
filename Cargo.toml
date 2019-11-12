@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 ansi_term = "0.12"
-gtfs-structures = "0.14"
+gtfs-structures = "0.15"
 Inflector = { version="0.11", default-features=false }
 itertools = "0.8"
 json = "0.12"
