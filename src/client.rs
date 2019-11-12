@@ -94,6 +94,13 @@ impl Client {
         })
     }
 
+    pub fn new_without_config(api_endpoint: &str, sparql_enpoint: &str) -> Result<Self, Error> {
+        Ok(Self {
+            api: ApiClient::new(api_endpoint, Default::default())?,
+            sparql: SparqlClient::new_without_config(sparql_enpoint),
+        })
+    }
+
     pub fn import_gtfs(
         &self,
         gtfs_filename: &str,

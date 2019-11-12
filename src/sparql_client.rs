@@ -34,6 +34,16 @@ pub struct SparqlClient {
 }
 
 impl SparqlClient {
+    /// initialize a client without discovering the configuration
+    pub fn new_without_config(endpoint: &str) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            endpoint: endpoint.to_owned(),
+            config: Default::default(),
+        }
+    }
+
+    /// create a new client and discory all the base entities id
     pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, SparqlError> {
         let mut client = Self {
             client: reqwest::Client::new(),
@@ -247,6 +257,22 @@ impl SparqlClient {
             [] => Ok(None),
             [item] => Ok(item.get("producer").and_then(|u| read_id_from_url(u))),
             _ => Err(SparqlError::Duplicate(producer_label.to_string())),
+        })
+    }
+
+    pub fn get_id_by_topo_id(&self, topo_id: &str) -> Result<Option<String>, SparqlError> {
+        self.sparql(
+            &["?item"],
+            &format!(
+                r#"?item wdt:{topo_id_prop} "{topo_id}"."#,
+                topo_id = topo_id,
+                topo_id_prop = self.config.properties.topo_id_id,
+            ),
+        )
+        .and_then(|mut items| match items.as_mut_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.get("item").and_then(|u| read_id_from_url(u))),
+            _ => Err(SparqlError::Duplicate(topo_id.to_string())),
         })
     }
 }
