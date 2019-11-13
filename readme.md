@@ -27,6 +27,20 @@ The `producer` needs to be already added to the transport TOPO instance.
 
     cargo run --release --bin import-gtfs -- --api <url of the wikibase api> --sparql <url of the sparql api> --producer <id of the producer> -i <path to gtfs.zip>
 
+#### Entity
+
+You can use the tool `entity` to search for entity in TOPO.
+
+This can be useful to explore or manage TOPO with cli tool.
+
+Eg. to get the id of the item with the topo_id_id (`P1`) "route":
+
+    cargo run --bin entities -- search --api <url of the wikibase api> --sparql <url of the sparql api> --claim 'P1="route"'
+
+Note: the `--claim` is directly passed to the sparql endpoint, so you need to know a bit sparql to use this.
+Note: The string must be quoted with `""`, the URL with `<>`
+Note: you can query a label with `--claim rdfs:label=\"<your label>\"@en`
+
 ## Contributing
 
 ### Building
