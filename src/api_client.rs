@@ -169,7 +169,7 @@ impl ApiClient {
         &self,
         object_type: ObjectType,
         label: &str,
-        extra_claims: &[json::JsonValue],
+        extra_claims: Vec<Option<json::JsonValue>>,
     ) -> Result<String, ApiError> {
         let labels = object! {
             "en" => object!{
@@ -177,16 +177,17 @@ impl ApiClient {
                 "value" => label
             }
         };
+        let extra_claims: Vec<_> = extra_claims.into_iter().filter_map(|v| v).collect();
 
         let claims = json::stringify(match &object_type {
             ObjectType::Property(datatype) => object! {
                 "labels" => labels,
                 "datatype" => datatype.to_string(),
-                "claims" => json::Array::from(extra_claims),
+                "claims" => extra_claims,
             },
             ObjectType::Item => object! {
                 "labels" => labels,
-                "claims" => json::Array::from(extra_claims),
+                "claims" => extra_claims,
             },
         });
 
@@ -252,7 +253,7 @@ impl ApiClient {
     pub fn create_item(
         &self,
         label: &str,
-        extra_claims: &[json::JsonValue],
+        extra_claims: Vec<Option<json::JsonValue>>,
     ) -> Result<String, ApiError> {
         self.create_object(ObjectType::Item, label, extra_claims)
     }
@@ -276,7 +277,7 @@ impl ApiClient {
             claims.push(claim_string(&self.config.properties.sha_256, sha));
         }
 
-        self.create_object(ObjectType::Item, &label, &claims)
+        self.create_object(ObjectType::Item, &label, claims)
     }
 
     pub fn insert_route(
@@ -290,8 +291,9 @@ impl ApiClient {
         } else {
             route.short_name.as_str()
         };
+
         let label = format!("{:?} {} ({})", route.route_type, route_name, producer_name);
-        let claims = [
+        let claims = vec![
             claim_item(
                 &self.config.properties.instance_of,
                 &self.config.items.route,
@@ -306,7 +308,7 @@ impl ApiClient {
             ),
         ];
 
-        self.create_object(ObjectType::Item, &label, &claims)
+        self.create_object(ObjectType::Item, &label, claims)
     }
 
     pub fn insert_stop(
@@ -314,7 +316,7 @@ impl ApiClient {
         stop: &gtfs_structures::Stop,
         data_source_id: &str,
     ) -> Result<String, ApiError> {
-        let claims = [
+        let claims = vec![
             claim_item(
                 &self.config.properties.instance_of,
                 &self.config.location_type(stop),
@@ -324,7 +326,7 @@ impl ApiClient {
             claim_string(&self.config.properties.gtfs_name, &stop.name),
         ];
 
-        self.create_object(ObjectType::Item, &stop.name, &claims)
+        self.create_object(ObjectType::Item, &stop.name, claims)
     }
 
     pub fn get_label(&self, id: &str) -> Result<String, anyhow::Error> {
@@ -340,8 +342,13 @@ impl ApiClient {
             .ok_or_else(|| anyhow!("no entitity {}", &id))
     }
 
-    pub fn add_claims(&self, entity_id: &str, claims: &[json::JsonValue]) -> Result<(), ApiError> {
-        let claims = json::stringify(object! { "claims" => json::Array::from(claims)});
+    pub fn add_claims(
+        &self,
+        entity_id: &str,
+        claims: Vec<Option<json::JsonValue>>,
+    ) -> Result<(), ApiError> {
+        let claims: Vec<_> = claims.into_iter().filter_map(|v| v).collect();
+        let claims = json::stringify(object! { "claims" => claims});
         log::trace!("claims: {}", claims);
         let mut res = self
             .client
@@ -362,8 +369,8 @@ impl ApiClient {
     }
 }
 
-pub fn claim(property: &str, datavalue: json::JsonValue) -> json::JsonValue {
-    object! {
+pub fn claim(property: &str, datavalue: json::JsonValue) -> Option<json::JsonValue> {
+    Some(object! {
         "mainsnak" => object!{
             "snaktype" => "value",
             "property" => property,
@@ -371,13 +378,18 @@ pub fn claim(property: &str, datavalue: json::JsonValue) -> json::JsonValue {
         },
         "type" => "statement",
         "rank" => "normal"
+    })
+}
+pub fn claim_string(property: &str, value: &str) -> Option<json::JsonValue> {
+    if value.is_empty() {
+        // it's impossible to add a claim with an empty value, so we skip it
+        None
+    } else {
+        claim(property, object! { "value" => value, "type" => "string" })
     }
 }
-pub fn claim_string(property: &str, value: &str) -> json::JsonValue {
-    claim(property, object! { "value" => value, "type" => "string" })
-}
 
-pub fn claim_item(property: &str, id: &str) -> json::JsonValue {
+pub fn claim_item(property: &str, id: &str) -> Option<json::JsonValue> {
     claim(
         property,
         object! {
