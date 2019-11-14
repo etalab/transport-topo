@@ -14,11 +14,11 @@ enum Opt {
         topo_id_id: String,
 
         /// Endpoint of the wikibase api
-        #[structopt(short, long)]
+        #[structopt(short, long, default_value = "http://localhost:8181/api.php")]
         api: String,
 
         /// Endpoint of the sparql query serive
-        #[structopt(short, long)]
+        #[structopt(short, long, default_value = "http://localhost:8989/bigdata/sparql")]
         sparql: String,
 
         /// Extra claim with the form P42:foobar. Can be repeated
