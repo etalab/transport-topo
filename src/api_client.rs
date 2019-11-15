@@ -381,6 +381,7 @@ pub fn claim(property: &str, datavalue: json::JsonValue) -> Option<json::JsonVal
     })
 }
 pub fn claim_string(property: &str, value: &str) -> Option<json::JsonValue> {
+    let value = value.trim();
     if value.is_empty() {
         // it's impossible to add a claim with an empty value, so we skip it
         None
