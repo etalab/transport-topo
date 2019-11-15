@@ -153,16 +153,11 @@ impl SparqlClient {
                  ?route wdt:{gtfs_id_prop} \"{gtfs_id}\".
                  ?route wdt:{data_source} ?data_source.
                  ?data_source wdt:{producer_prop} wd:{producer_id}.
-                 ?route wdt:{route_short_name} ?route_short_name.
-                 ?route wdt:{route_long_name} ?route_long_name.
-                 ?route wdt:{has_physical_mode} ?physical_mode.",
+                 ",
                 instance_of = self.config.properties.instance_of,
                 route = self.config.items.route,
                 gtfs_id_prop = self.config.properties.gtfs_id,
                 producer_prop = self.config.properties.produced_by,
-                route_short_name = self.config.properties.gtfs_short_name,
-                route_long_name = self.config.properties.gtfs_long_name,
-                has_physical_mode = self.config.properties.has_physical_mode,
                 data_source = self.config.properties.data_source,
                 gtfs_id = gtfs_id,
                 producer_id = producer_id,

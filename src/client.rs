@@ -217,7 +217,7 @@ impl Client {
                     &self.sparql.config.properties.part_of,
                     parent_wikibase_id,
                 );
-                self.api.add_claims(child_wikibase_id, &[claim])?;
+                self.api.add_claims(child_wikibase_id, vec![claim])?;
             }
         }
         Ok(())

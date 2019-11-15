@@ -27,7 +27,7 @@ enum Opt {
     },
 }
 
-fn parse_claims(claims: &[String]) -> Result<Vec<json::JsonValue>, anyhow::Error> {
+fn parse_claims(claims: &[String]) -> Result<Vec<Option<json::JsonValue>>, anyhow::Error> {
     let re = regex::Regex::new(r"^(P\d+):(.*)$")?;
     claims
         .iter()
@@ -63,7 +63,7 @@ fn create_producer(
                 &entities_id.properties.instance_of,
                 &entities_id.items.producer,
             ));
-            let id = client.api.create_item(label, &claims)?;
+            let id = client.api.create_item(label, claims)?;
             log::info!("creating producer \"{}\" with id {}", label, id);
             Ok(id.to_owned())
         }

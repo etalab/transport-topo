@@ -9,7 +9,7 @@ use inflector::Inflector;
 fn get_or_create_item(
     client: &Client,
     label: &str,
-    claims: &[json::JsonValue],
+    claims: &[Option<json::JsonValue>],
 ) -> Result<String, Error> {
     let mut claims = Vec::from(claims);
     let topo_id = label.to_snake_case();
@@ -23,7 +23,7 @@ fn get_or_create_item(
         log::info!("item \"{}\" already exists with id {}", label, id);
         id
     } else {
-        let id = client.api.create_item(label, &claims)?;
+        let id = client.api.create_item(label, claims)?;
         log::info!("creating item \"{}\" with id {}", label, id);
         id
     };
@@ -67,7 +67,7 @@ fn get_or_create_property_impl<'a>(
     };
     // 2 properties cannot have the same label, so we just try to insert it
     // and get the id of the conflicting property if present
-    let r = client.create_object(ObjectType::Property(prop_type), label, &claims);
+    let r = client.create_object(ObjectType::Property(prop_type), label, claims);
     if let Err(ApiError::PropertyAlreadyExists { label, id }) = r {
         log::info!("property \"{}\" already exists with id {}", label, id);
         Ok(id)
