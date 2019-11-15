@@ -39,7 +39,16 @@ Eg. to get the id of the item with the topo_id_id (`P1`) "route":
 
 Note: the `--claim` is directly passed to the sparql endpoint, so you need to know a bit sparql to use this.
 Note: The string must be quoted with `""`, the URL with `<>`
-Note: you can query a label with `--claim rdfs:label=\"<your label>\"@en`
+
+##### Examples uses
+
+* query entities with the label "bob" (note the `""` around the label, and the `@en` telling where looking for the english label):
+
+    cargo run --bin entities -- search --api <url of the wikibase api> --sparql <url of the sparql api> --claim 'rdfs:label="bob"@en'
+
+* query entities that have property P42 with value `https://transport.data.gouv.fr/datasets/5bfd2e81634f4122b3023260`, which is of type `url` (note the `<>` around the url):
+
+    cargo run --bin entities -- search --api <url of the wikibase api> --sparql <url of the sparql api> --claim 'P42=<https://transport.data.gouv.fr/datasets/5bfd2e81634f4122b3023260>'
 
 ## Contributing
 
