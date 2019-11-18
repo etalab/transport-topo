@@ -111,6 +111,7 @@ impl SparqlClient {
             .get(&self.endpoint)
             .query(&[("format", "json"), ("query", query)])
             .send()?
+            .error_for_status()?
             .text()?;
         debug!("Query response: {:?}", response);
         Ok(json::parse(&response)?)
