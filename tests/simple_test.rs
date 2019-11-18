@@ -5,31 +5,19 @@ use transit_topo::api_client::{ObjectType, PropertyDataType};
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
     // we first check that our exists method cannot find a unknown object
-    assert!(!wikibase.exists(ObjectType::Item, "pouet"));
+    assert!(!wikibase.exists("pouet"));
 
     // then we check the real objects
-    assert!(wikibase.exists(
-        ObjectType::Property(PropertyDataType::String),
-        "instance of"
-    ));
-    assert!(wikibase.exists(
-        ObjectType::Property(PropertyDataType::String),
-        "gtfs short name"
-    ));
-    assert!(wikibase.exists(
-        ObjectType::Property(PropertyDataType::String),
-        "gtfs long name"
-    ));
-    assert!(wikibase.exists(ObjectType::Property(PropertyDataType::String), "gtfs id"));
-    assert!(wikibase.exists(
-        ObjectType::Property(PropertyDataType::Item),
-        "Topo tools id"
-    ));
+    assert!(wikibase.exists("Instance of"));
+    assert!(wikibase.exists("GTFS short name"));
+    assert!(wikibase.exists("GTFS long name"));
+    assert!(wikibase.exists("GTFS id"));
+    assert!(wikibase.exists("Topo tools id"));
 
-    assert!(wikibase.exists(ObjectType::Item, "physical mode"));
-    assert!(wikibase.exists(ObjectType::Item, "producer"));
-    assert!(wikibase.exists(ObjectType::Item, "route"));
-    assert!(wikibase.exists(ObjectType::Item, "bus"));
+    assert!(wikibase.exists("Physical mode"));
+    assert!(wikibase.exists("Producer"));
+    assert!(wikibase.exists("Route"));
+    assert!(wikibase.exists("Bus"));
 
     // we check all the objects with a topo_id
     assert_eq!(

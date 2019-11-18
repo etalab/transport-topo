@@ -32,12 +32,21 @@ impl Wikibase {
         &self.client.sparql.config.items
     }
 
-    pub fn exists(&self, object_type: ObjectType, entity: &str) -> bool {
-        self.client
-            .api
-            .find_entity_id(object_type, entity)
-            .expect("invalid wikibase query")
-            .is_some()
+    pub fn exists(&self, entity: &str) -> bool {
+        match self
+            .client
+            .sparql
+            .sparql(
+                &["?item"],
+                &format!(r#"?item rdfs:label "{label}"@en"#, label = entity,),
+            )
+            .expect("impossible to call sparql")
+            .as_mut_slice()
+        {
+            [] => false,
+            [_] => true,
+            val => panic!("too many valuefor entity {} : {:?} ", entity, val),
+        }
     }
 
     pub fn get_entity(&self, item: &str) -> transit_topo::entity::Entity {
