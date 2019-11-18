@@ -3,6 +3,7 @@ mod api_structures;
 pub mod client;
 pub mod database_initializer;
 pub mod entity;
+pub mod known_entities;
 pub mod log;
 pub mod sparql_client;
 

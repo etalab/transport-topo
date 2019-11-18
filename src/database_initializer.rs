@@ -1,7 +1,8 @@
 use crate::api_client::{
     claim_item, claim_string, ApiClient, ApiError, ObjectType, PropertyDataType,
 };
-use crate::client::{Client, EntitiesId, Items, Properties};
+use crate::client::Client;
+use crate::known_entities::{EntitiesId, Items, Properties};
 use anyhow::Error;
 use inflector::Inflector;
 
@@ -14,7 +15,7 @@ fn get_or_create_item(
     let mut claims = Vec::from(claims);
     let topo_id = label.to_snake_case();
     claims.push(claim_string(
-        client.api.config.properties.topo_id_id.as_str(),
+        client.api.known_entities.properties.topo_id_id.as_str(),
         &topo_id,
     ));
 
@@ -39,7 +40,7 @@ fn get_or_create_property(
         api,
         label,
         prop_type,
-        api.config.properties.topo_id_id.as_str(),
+        api.known_entities.properties.topo_id_id.as_str(),
     )
 }
 
@@ -47,10 +48,10 @@ fn get_or_create_topo_id_id(client: &mut Client) -> Result<String, Error> {
     let topo_id =
         get_or_create_property_impl(&client.api, "Topo tools id", PropertyDataType::String, None)?;
 
-    // the topo id is a bit special, once we get its id, we set it in the configuration as it will be needed
+    // the topo id is a bit special, once we get its id, we set it in the known_entitiesuration as it will be needed
     // for the creation of all the other properties/items
-    client.sparql.config.properties.topo_id_id = topo_id.clone();
-    client.api.config.properties.topo_id_id = topo_id.clone();
+    client.sparql.known_entities.properties.topo_id_id = topo_id.clone();
+    client.api.known_entities.properties.topo_id_id = topo_id.clone();
 
     Ok(topo_id)
 }
@@ -79,7 +80,7 @@ fn get_or_create_property_impl<'a>(
 }
 
 pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<EntitiesId, Error> {
-    let mut client = Client::new_without_config(api_endpoint, sparql_endpoint)?;
+    let mut client = Client::new_without_known_entities(api_endpoint, sparql_endpoint)?;
     let topo_id = get_or_create_topo_id_id(&mut client)?;
 
     let create_prop = |label, prop_type| get_or_create_property(&client.api, label, prop_type);
@@ -102,7 +103,7 @@ pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<Ent
     };
     let create_stop = |label, id| get_or_create_item(&client, label, &[claim_string(&gtfs_id, id)]);
 
-    let config = EntitiesId {
+    let known_entities = EntitiesId {
         properties: Properties {
             topo_id_id: topo_id.to_owned(),
             produced_by: create_prop("Produced by", PropertyDataType::Item)?,
@@ -141,5 +142,5 @@ pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<Ent
         },
     };
 
-    Ok(config)
+    Ok(known_entities)
 }

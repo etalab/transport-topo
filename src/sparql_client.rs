@@ -1,4 +1,4 @@
-use crate::client::{EntitiesId, Items, Properties};
+use crate::known_entities::{EntitiesId, Items, Properties};
 use anyhow::Context;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -30,25 +30,25 @@ pub fn read_id_from_url(url: &str) -> Option<String> {
 pub struct SparqlClient {
     client: reqwest::Client,
     endpoint: String,
-    pub config: crate::client::EntitiesId,
+    pub known_entities: EntitiesId,
 }
 
 impl SparqlClient {
-    /// initialize a client without discovering the configuration
-    pub fn new_without_config(endpoint: &str) -> Self {
+    /// initialize a client without discovering the known_entitiesuration
+    pub fn new_without_known_entities(endpoint: &str) -> Self {
         Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
-            config: Default::default(),
+            known_entities: Default::default(),
         }
     }
 
     /// create a new client and discory all the base entities id
-    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, anyhow::Error> {
+    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, SparqlError> {
         let mut client = Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
-            config: EntitiesId {
+            known_entities: EntitiesId {
                 properties: Properties {
                     topo_id_id: topo_id_id.to_owned(),
                     ..Default::default()
@@ -57,13 +57,13 @@ impl SparqlClient {
             },
         };
 
-        client.config = client
-            .discover_config()
+        client.known_entities = client
+            .discover_known_entities()
             .context("impossible to discovery config")?;
         Ok(client)
     }
 
-    pub fn discover_config(&self) -> Result<EntitiesId, SparqlError> {
+    pub fn discover_known_entities(&self) -> Result<EntitiesId, SparqlError> {
         Ok(EntitiesId {
             items: Items {
                 physical_mode: self.find_entity_by_topo_id("physical_mode")?,
@@ -84,7 +84,7 @@ impl SparqlClient {
                 stop_boarding_area: self.find_entity_by_topo_id("stop_boarding_area")?,
             },
             properties: Properties {
-                topo_id_id: self.config.properties.topo_id_id.to_string(),
+                topo_id_id: self.known_entities.properties.topo_id_id.to_string(),
                 produced_by: self.find_entity_by_topo_id("produced_by")?,
                 instance_of: self.find_entity_by_topo_id("instance_of")?,
                 gtfs_short_name: self.find_entity_by_topo_id("gtfs_short_name")?,
@@ -157,11 +157,11 @@ impl SparqlClient {
                  ?route wdt:{data_source} ?data_source.
                  ?data_source wdt:{producer_prop} wd:{producer_id}.
                  ",
-                instance_of = self.config.properties.instance_of,
-                route = self.config.items.route,
-                gtfs_id_prop = self.config.properties.gtfs_id,
-                producer_prop = self.config.properties.produced_by,
-                data_source = self.config.properties.data_source,
+                instance_of = self.known_entities.properties.instance_of,
+                route = self.known_entities.items.route,
+                gtfs_id_prop = self.known_entities.properties.gtfs_id,
+                producer_prop = self.known_entities.properties.produced_by,
+                data_source = self.known_entities.properties.data_source,
                 gtfs_id = gtfs_id,
                 producer_id = producer_id,
             ),
@@ -187,12 +187,12 @@ impl SparqlClient {
                  ?stop wdt:{data_source} ?data_source.
                  ?data_source wdt:{producer_prop} wd:{producer_id}.
                  ?stop wdt:{gtfs_name} ?stop_name.",
-                instance_of = self.config.properties.instance_of,
-                stop_type = self.config.location_type(stop),
-                gtfs_id_prop = self.config.properties.gtfs_id,
-                producer_prop = self.config.properties.produced_by,
-                gtfs_name = self.config.properties.gtfs_name,
-                data_source = self.config.properties.data_source,
+                instance_of = self.known_entities.properties.instance_of,
+                stop_type = self.known_entities.location_type(stop),
+                gtfs_id_prop = self.known_entities.properties.gtfs_id,
+                producer_prop = self.known_entities.properties.produced_by,
+                gtfs_name = self.known_entities.properties.gtfs_name,
+                data_source = self.known_entities.properties.data_source,
                 gtfs_id = stop.id,
                 producer_id = producer_id,
             ),
@@ -207,7 +207,7 @@ impl SparqlClient {
             &["?item_id"],
             &format!(
                 "?item_id wdt:{topo_id_id} '{item_topo_id}'",
-                topo_id_id = self.config.properties.topo_id_id,
+                topo_id_id = self.known_entities.properties.topo_id_id,
                 item_topo_id = item_topo_id
             ),
         )
@@ -229,8 +229,8 @@ impl SparqlClient {
                 "wd:{producer_id} wdt:{instance_of} wd:{producer};
                                   rdfs:label ?label.",
                 producer_id = producer_id,
-                instance_of = self.config.properties.instance_of,
-                producer = self.config.items.producer
+                instance_of = self.known_entities.properties.instance_of,
+                producer = self.known_entities.items.producer
             ),
         )
         .and_then(|mut items| match items.as_mut_slice() {
@@ -247,8 +247,8 @@ impl SparqlClient {
                 r#"?producer wdt:{instance_of} wd:{producer};
                            rdfs:label "{label}"@en "#,
                 label = producer_label,
-                instance_of = self.config.properties.instance_of,
-                producer = self.config.items.producer
+                instance_of = self.known_entities.properties.instance_of,
+                producer = self.known_entities.items.producer
             ),
         )
         .and_then(|mut items| match items.as_mut_slice() {
@@ -264,7 +264,7 @@ impl SparqlClient {
             &format!(
                 r#"?item wdt:{topo_id_prop} "{topo_id}"."#,
                 topo_id = topo_id,
-                topo_id_prop = self.config.properties.topo_id_id,
+                topo_id_prop = self.known_entities.properties.topo_id_id,
             ),
         )
         .and_then(|mut items| match items.as_mut_slice() {

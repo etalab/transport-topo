@@ -19,7 +19,7 @@ enum Opt {
 
         /// Extra claim with the form P42=foobar. Can be repeated
         /// known entities can be used in the form  `@<known_entity>`
-        /// `known_entity can be the name of the fields in client::Properties or client::Items
+        /// `known_entity can be the name of the fields in known_entities::Properties or known_entities::Items
         /// for example to add a claims saying that the entity should be a `instance of` `producer`:
         /// --claim "@instance_of=@producer"
         #[structopt(short, long = "claim")]
@@ -44,7 +44,7 @@ fn as_map(val: serde_json::Value) -> std::collections::HashMap<String, String> {
 // --claims "@instance_of=@producer"
 fn replace_known_entities(
     claims: Vec<(String, String)>,
-    entities: &transit_topo::client::EntitiesId,
+    entities: &transit_topo::known_entities::EntitiesId,
 ) -> Vec<(String, String)> {
     let prop =
         as_map(serde_json::to_value(&entities.properties).expect("impossible to serialize prop"));
@@ -67,7 +67,7 @@ fn replace_known_entities(
 
 fn parse_claims(
     claims: &[String],
-    entities: &transit_topo::client::EntitiesId,
+    entities: &transit_topo::known_entities::EntitiesId,
 ) -> Result<Vec<(String, String)>, anyhow::Error> {
     let re = regex::Regex::new(r"^(.*)=(.*)$")?;
 
@@ -96,7 +96,7 @@ fn search(
     }
     let client = Client::new(api, sparql, topo_id_id)?;
 
-    let claims = parse_claims(claims, &client.sparql.config)?;
+    let claims = parse_claims(claims, &client.sparql.known_entities)?;
 
     let where_clause = format!(
         "?item {claims}.",

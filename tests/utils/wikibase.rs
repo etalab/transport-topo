@@ -24,12 +24,12 @@ impl Wikibase {
         }
     }
 
-    pub fn properties(&self) -> &transit_topo::client::Properties {
-        &self.client.sparql.config.properties
+    pub fn properties(&self) -> &transit_topo::known_entities::Properties {
+        &self.client.sparql.known_entities.properties
     }
 
-    pub fn items(&self) -> &transit_topo::client::Items {
-        &self.client.sparql.config.items
+    pub fn items(&self) -> &transit_topo::known_entities::Items {
+        &self.client.sparql.known_entities.items
     }
 
     pub fn exists(&self, entity: &str) -> bool {
@@ -57,7 +57,7 @@ impl Wikibase {
     }
 
     pub fn get_all_items_for_datasource(&self, data_source_id: &str) -> BTreeSet<DataSourceItem> {
-        let prop = &self.client.sparql.config.properties;
+        let prop = &self.client.sparql.known_entities.properties;
         let r = self
             .client
             .sparql
@@ -92,7 +92,7 @@ impl Wikibase {
     }
 
     pub fn get_producer_datasources_id(&self, producer_id: &str) -> BTreeSet<String> {
-        let prop = &self.client.sparql.config.properties;
+        let prop = &self.client.sparql.known_entities.properties;
         let r = self
             .client
             .sparql
@@ -123,7 +123,7 @@ impl Wikibase {
                 &["?topo_id"],
                 &format!(
                     "?x wdt:{topo_id} ?topo_id",
-                    topo_id = "P1" //self.client.sparql.config.items.producer TODO remove this hardcoding
+                    topo_id = "P1" //self.client.sparql.known_entities.items.producer TODO remove this hardcoding
                 ),
             )
             .expect("invalid sparql query");

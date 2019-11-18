@@ -58,7 +58,7 @@ fn create_producer(
         None => {
             log::info!("no producer \"{}\" exists, creating one", label);
             let mut claims = parse_claims(claims)?;
-            let entities_id = &client.sparql.config;
+            let entities_id = &client.sparql.known_entities;
             claims.push(api_client::claim_item(
                 &entities_id.properties.instance_of,
                 &entities_id.items.producer,
