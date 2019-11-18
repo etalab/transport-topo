@@ -1,4 +1,5 @@
 use crate::client::{EntitiesId, Items, Properties};
+use anyhow::Context;
 use itertools::Itertools;
 use log::{debug, trace};
 use std::collections::HashMap;
@@ -44,7 +45,7 @@ impl SparqlClient {
     }
 
     /// create a new client and discory all the base entities id
-    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, SparqlError> {
+    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, anyhow::Error> {
         let mut client = Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
@@ -57,7 +58,9 @@ impl SparqlClient {
             },
         };
 
-        client.config = client.discover_config()?;
+        client.config = client
+            .discover_config()
+            .context("impossible to discovery config")?;
         Ok(client)
     }
 
