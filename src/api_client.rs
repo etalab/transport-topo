@@ -35,6 +35,7 @@ pub enum ApiError {
 
 pub enum PropertyDataType {
     String,
+    Url,
     Item,
 }
 
@@ -43,6 +44,7 @@ impl std::string::ToString for PropertyDataType {
         match self {
             Self::String => "string".to_owned(),
             Self::Item => "wikibase-item".to_owned(),
+            Self::Url => "url".to_owned(),
         }
     }
 }

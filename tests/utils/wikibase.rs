@@ -1,7 +1,6 @@
 //! Some utilities wikibase queries to ease tests
 use crate::utils::DockerContainerWrapper;
 use std::collections::BTreeSet;
-use transit_topo::api_client::ObjectType;
 use transit_topo::sparql_client::read_id_from_url;
 
 pub struct Wikibase {
@@ -32,21 +31,24 @@ impl Wikibase {
         &self.client.sparql.known_entities.items
     }
 
-    pub fn exists(&self, entity: &str) -> bool {
+    pub fn get_entity_id(&self, label: &str) -> Option<String> {
         match self
             .client
             .sparql
             .sparql(
                 &["?item"],
-                &format!(r#"?item rdfs:label "{label}"@en"#, label = entity,),
+                &format!(r#"?item rdfs:label "{label}"@en"#, label = label,),
             )
             .expect("impossible to call sparql")
             .as_mut_slice()
         {
-            [] => false,
-            [_] => true,
-            val => panic!("too many valuefor entity {} : {:?} ", entity, val),
+            [] => None,
+            [e] => transit_topo::sparql_client::read_id_from_url(&e["item"]),
+            val => panic!("too many value for entity {} : {:?} ", label, val),
         }
+    }
+    pub fn exists(&self, entity: &str) -> bool {
+        self.get_entity_id(entity).is_some()
     }
 
     pub fn get_entity(&self, item: &str) -> transit_topo::entity::Entity {

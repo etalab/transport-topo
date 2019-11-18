@@ -44,7 +44,7 @@ impl SparqlClient {
     }
 
     /// create a new client and discory all the base entities id
-    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, SparqlError> {
+    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, anyhow::Error> {
         let mut client = Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
@@ -63,7 +63,7 @@ impl SparqlClient {
         Ok(client)
     }
 
-    pub fn discover_known_entities(&self) -> Result<EntitiesId, SparqlError> {
+    pub fn discover_known_entities(&self) -> Result<EntitiesId, anyhow::Error> {
         Ok(EntitiesId {
             items: Items {
                 physical_mode: self.find_entity_by_topo_id("physical_mode")?,
@@ -237,24 +237,6 @@ impl SparqlClient {
             [] => Ok(None),
             [item] => Ok(item.remove("label")),
             _ => Err(SparqlError::Duplicate(producer_id.to_string())),
-        })
-    }
-
-    pub fn get_producer_id(&self, producer_label: &str) -> Result<Option<String>, SparqlError> {
-        self.sparql(
-            &["?producer"],
-            &format!(
-                r#"?producer wdt:{instance_of} wd:{producer};
-                           rdfs:label "{label}"@en "#,
-                label = producer_label,
-                instance_of = self.known_entities.properties.instance_of,
-                producer = self.known_entities.items.producer
-            ),
-        )
-        .and_then(|mut items| match items.as_mut_slice() {
-            [] => Ok(None),
-            [item] => Ok(item.get("producer").and_then(|u| read_id_from_url(u))),
-            _ => Err(SparqlError::Duplicate(producer_label.to_string())),
         })
     }
 
