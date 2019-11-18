@@ -1,7 +1,6 @@
 use crate::client::{EntitiesId, Items, Properties};
 use anyhow::Context;
 use itertools::Itertools;
-use log::{debug, trace};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -105,7 +104,7 @@ impl SparqlClient {
         })
     }
     fn query(&self, query: &str) -> Result<json::JsonValue, SparqlError> {
-        debug!("Sparql query: {}", query);
+        log::debug!("Sparql query: {}", query);
         let response = self
             .client
             .get(&self.endpoint)
@@ -113,7 +112,7 @@ impl SparqlClient {
             .send()?
             .error_for_status()?
             .text()?;
-        debug!("Query response: {:?}", response);
+        log::trace!("Query response: {:?}", response);
         Ok(json::parse(&response)?)
     }
 
@@ -142,7 +141,7 @@ impl SparqlClient {
         producer_id: &str,
         gtfs_id: &str,
     ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
-        trace!("Finding route {} of producer {}", gtfs_id, producer_id);
+        log::trace!("Finding route {} of producer {}", gtfs_id, producer_id);
         self.sparql(
             &[
                 "?route",
@@ -174,7 +173,7 @@ impl SparqlClient {
         producer_id: &str,
         stop: &gtfs_structures::Stop,
     ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
-        trace!(
+        log::trace!(
             "Finding stop {} {} of producer {}",
             stop.name,
             stop.id,
