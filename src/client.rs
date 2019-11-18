@@ -3,7 +3,7 @@ use crate::sparql_client::SparqlClient;
 use anyhow::Context;
 use anyhow::Error;
 use log::{info, warn};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct EntitiesId {
@@ -11,7 +11,7 @@ pub struct EntitiesId {
     pub items: Items,
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Properties {
     pub topo_id_id: String,
     pub produced_by: String,
@@ -33,7 +33,7 @@ pub struct Properties {
     pub connecting_line: String,
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Items {
     pub physical_mode: String,
     pub route: String,

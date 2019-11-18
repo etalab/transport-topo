@@ -17,15 +17,61 @@ enum Opt {
         #[structopt(short, long, default_value = "http://localhost:8989/bigdata/sparql")]
         sparql: String,
 
-        /// Extra claim with the form P42:foobar. Can be repeated
+        /// Extra claim with the form P42=foobar. Can be repeated
+        /// known entities can be used in the form  `@<known_entity>`
+        /// `known_entity can be the name of the fields in client::Properties or client::Items
+        /// for example to add a claims saying that the entity should be a `instance of` `producer`:
+        /// --claim "@instance_of=@producer"
         #[structopt(short, long = "claim")]
         claims: Vec<String>,
     },
 }
 
-fn parse_claims(claims: &[String]) -> Result<Vec<(String, String)>, anyhow::Error> {
-    let re = regex::Regex::new(r"^(.*)=(.*)$")?;
+// convert the Json representation of a simple struct (either client::Properties or client::Items)
+// into a hashmap field => value
+// it has lots of `expect`, because it should never fail, as it depends on the code (so checked at build time)
+fn as_map(val: serde_json::Value) -> std::collections::HashMap<String, String> {
+    val.as_object()
+        .expect("invalid value")
+        .iter()
+        .map(|(k, v)| (k.clone(), v.as_str().expect("value not string").to_owned()))
+        .collect()
+}
+
+// replace in the claims known properties or known items
+// the known fields are taken as "@field"
+// for example to add a claims saying that the entity should be a `instance of` `producer`:
+// --claims "@instance_of=@producer"
+fn replace_known_entities(
+    claims: Vec<(String, String)>,
+    entities: &transit_topo::client::EntitiesId,
+) -> Vec<(String, String)> {
+    let prop =
+        as_map(serde_json::to_value(&entities.properties).expect("impossible to serialize prop"));
+    let items =
+        as_map(serde_json::to_value(&entities.items).expect("impossible to serialize items"));
+
     claims
+        .into_iter()
+        .map(|(mut claim_prop, mut claim_value)| {
+            for (k, v) in prop.iter() {
+                claim_prop = claim_prop.replace(&format!("@{}", k), v);
+            }
+            for (k, v) in items.iter() {
+                claim_value = claim_value.replace(&format!("@{}", k), &format!("wd:{}", v));
+            }
+            (claim_prop, claim_value)
+        })
+        .collect()
+}
+
+fn parse_claims(
+    claims: &[String],
+    entities: &transit_topo::client::EntitiesId,
+) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let re = regex::Regex::new(r"^(.*)=(.*)$")?;
+
+    let claims: Result<Vec<(String, String)>, anyhow::Error> = claims
         .iter()
         .map(|claim| {
             let captures = re
@@ -33,7 +79,9 @@ fn parse_claims(claims: &[String]) -> Result<Vec<(String, String)>, anyhow::Erro
                 .ok_or_else(|| anyhow::anyhow!("Could not parse claim {}", claim))?;
             Ok((captures[1].to_owned(), captures[2].to_owned()))
         })
-        .collect()
+        .collect();
+
+    Ok(replace_known_entities(claims?, entities))
 }
 
 fn search(
@@ -48,7 +96,8 @@ fn search(
     }
     let client = Client::new(api, sparql, topo_id_id)?;
 
-    let claims = parse_claims(claims)?;
+    let claims = parse_claims(claims, &client.sparql.config)?;
+
     let where_clause = format!(
         "?item {claims}.",
         claims = claims
