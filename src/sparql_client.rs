@@ -11,9 +11,9 @@ pub enum SparqlError {
     TopoIdNotFound(String),
     #[error("Several entities with topo id {0}")]
     DuplicatedTopoId(String),
-    #[error("error: {0}")]
+    #[error("Impossible to query: {0}")]
     ReqwestError(#[from] reqwest::Error),
-    #[error("error: {0}")]
+    #[error("Invalid json: {0}")]
     InvalidJsonError(#[from] json::Error),
     #[error("Error parsing the id {0} for entity with topo id {1}")]
     TopoInvalidId(String, String),
