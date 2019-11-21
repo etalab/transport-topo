@@ -1,5 +1,6 @@
 use crate::api_client::ApiClient;
 use crate::sparql_client::SparqlClient;
+use anyhow::Context;
 use anyhow::Error;
 use log::{info, warn};
 use serde::Deserialize;
@@ -87,7 +88,8 @@ impl EntitiesId {
 
 impl Client {
     pub fn new(api_endpoint: &str, sparql_enpoint: &str, topo_id_id: &str) -> Result<Self, Error> {
-        let sparql = SparqlClient::new(sparql_enpoint, topo_id_id)?;
+        let sparql = SparqlClient::new(sparql_enpoint, topo_id_id)
+            .context("impossible to create sparql client")?;
         Ok(Self {
             api: ApiClient::new(api_endpoint, sparql.config.clone())?,
             sparql,

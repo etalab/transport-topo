@@ -1,6 +1,6 @@
 use crate::client::{EntitiesId, Items, Properties};
+use anyhow::Context;
 use itertools::Itertools;
-use log::{debug, trace};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -10,9 +10,9 @@ pub enum SparqlError {
     TopoIdNotFound(String),
     #[error("Several entities with topo id {0}")]
     DuplicatedTopoId(String),
-    #[error("error: {0}")]
+    #[error("Impossible to query: {0}")]
     ReqwestError(#[from] reqwest::Error),
-    #[error("error: {0}")]
+    #[error("Invalid json: {0}")]
     InvalidJsonError(#[from] json::Error),
     #[error("Error parsing the id {0} for entity with topo id {1}")]
     TopoInvalidId(String, String),
@@ -44,7 +44,7 @@ impl SparqlClient {
     }
 
     /// create a new client and discory all the base entities id
-    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, SparqlError> {
+    pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, anyhow::Error> {
         let mut client = Self {
             client: reqwest::Client::new(),
             endpoint: endpoint.to_owned(),
@@ -57,7 +57,9 @@ impl SparqlClient {
             },
         };
 
-        client.config = client.discover_config()?;
+        client.config = client
+            .discover_config()
+            .context("impossible to discovery config")?;
         Ok(client)
     }
 
@@ -102,14 +104,15 @@ impl SparqlClient {
         })
     }
     fn query(&self, query: &str) -> Result<json::JsonValue, SparqlError> {
-        debug!("Sparql query: {}", query);
+        log::debug!("Sparql query: {}", query);
         let response = self
             .client
             .get(&self.endpoint)
             .query(&[("format", "json"), ("query", query)])
             .send()?
+            .error_for_status()?
             .text()?;
-        debug!("Query response: {:?}", response);
+        log::trace!("Query response: {:?}", response);
         Ok(json::parse(&response)?)
     }
 
@@ -138,7 +141,7 @@ impl SparqlClient {
         producer_id: &str,
         gtfs_id: &str,
     ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
-        trace!("Finding route {} of producer {}", gtfs_id, producer_id);
+        log::trace!("Finding route {} of producer {}", gtfs_id, producer_id);
         self.sparql(
             &[
                 "?route",
@@ -170,7 +173,7 @@ impl SparqlClient {
         producer_id: &str,
         stop: &gtfs_structures::Stop,
     ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
-        trace!(
+        log::trace!(
             "Finding stop {} {} of producer {}",
             stop.name,
             stop.id,
