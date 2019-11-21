@@ -3,87 +3,10 @@ use crate::sparql_client::SparqlClient;
 use anyhow::Context;
 use anyhow::Error;
 use log::{info, warn};
-use serde::Deserialize;
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct EntitiesId {
-    pub properties: Properties,
-    pub items: Items,
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct Properties {
-    pub topo_id_id: String,
-    pub produced_by: String,
-    pub instance_of: String,
-    pub gtfs_name: String,
-    pub gtfs_short_name: String,
-    pub gtfs_long_name: String,
-    pub gtfs_id: String,
-    pub data_source: String,
-    pub first_seen_in: String,
-    pub source: String,
-    pub file_format: String,
-    pub sha_256: String,
-    pub has_physical_mode: String,
-    pub tool_version: String,
-    /// Shows a relation of inclusion: a stop point is part_of a stop area
-    pub part_of: String,
-    /// Shows that a stop is connected to a line https://www.wikidata.org/wiki/Property:P81
-    pub connecting_line: String,
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct Items {
-    pub physical_mode: String,
-    pub route: String,
-    pub producer: String,
-    pub tramway: String,
-    pub subway: String,
-    pub railway: String,
-    pub bus: String,
-    pub ferry: String,
-    pub cable_car: String,
-    pub gondola: String,
-    pub funicular: String,
-    pub stop_point: String,
-    pub stop_area: String,
-    pub stop_entrance: String,
-    pub stop_boarding_area: String,
-    pub stop_generic_node: String,
-}
 
 pub struct Client {
     pub api: ApiClient,
     pub sparql: SparqlClient,
-}
-
-impl EntitiesId {
-    pub fn physical_mode(&self, route: &gtfs_structures::Route) -> &str {
-        use gtfs_structures::RouteType::*;
-        match route.route_type {
-            Tramway => &self.items.tramway,
-            Subway => &self.items.subway,
-            Rail => &self.items.railway,
-            Bus => &self.items.bus,
-            Ferry => &self.items.ferry,
-            CableCar => &self.items.cable_car,
-            Gondola => &self.items.gondola,
-            Funicular => &self.items.funicular,
-            _ => &self.items.bus,
-        }
-    }
-
-    pub fn location_type(&self, stop: &gtfs_structures::Stop) -> &str {
-        use gtfs_structures::LocationType::*;
-        match stop.location_type {
-            StopPoint => &self.items.stop_point,
-            StopArea => &self.items.stop_area,
-            StationEntrance => &self.items.stop_entrance,
-            GenericNode => &self.items.stop_generic_node,
-            BoardingArea => &self.items.stop_boarding_area,
-        }
-    }
 }
 
 impl Client {
@@ -91,15 +14,18 @@ impl Client {
         let sparql = SparqlClient::new(sparql_enpoint, topo_id_id)
             .context("impossible to create sparql client")?;
         Ok(Self {
-            api: ApiClient::new(api_endpoint, sparql.config.clone())?,
+            api: ApiClient::new(api_endpoint, sparql.known_entities.clone())?,
             sparql,
         })
     }
 
-    pub fn new_without_config(api_endpoint: &str, sparql_enpoint: &str) -> Result<Self, Error> {
+    pub fn new_without_known_entities(
+        api_endpoint: &str,
+        sparql_enpoint: &str,
+    ) -> Result<Self, Error> {
         Ok(Self {
             api: ApiClient::new(api_endpoint, Default::default())?,
-            sparql: SparqlClient::new_without_config(sparql_enpoint),
+            sparql: SparqlClient::new_without_known_entities(sparql_enpoint),
         })
     }
 
@@ -216,7 +142,7 @@ impl Client {
                     }
                 };
                 let claim = crate::api_client::claim_item(
-                    &self.sparql.config.properties.part_of,
+                    &self.sparql.known_entities.properties.part_of,
                     parent_wikibase_id,
                 );
                 self.api.add_claims(child_wikibase_id, vec![claim])?;

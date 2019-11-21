@@ -1,7 +1,6 @@
 mod utils;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
-use transit_topo::api_client::{ObjectType, PropertyDataType};
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
     // we first check that our exists method cannot find a unknown object
@@ -83,10 +82,14 @@ fn create_producer(
     docker: &utils::DockerContainerWrapper,
 ) -> String {
     utils::run(
-        "producer",
+        "entities",
         &[
             "create",
             label,
+            "--type",
+            "item",
+            "--unique-claim",
+            "@instance_of=@producer",
             "--api",
             &docker.api_endpoint,
             "--sparql",
@@ -95,12 +98,45 @@ fn create_producer(
     );
 
     // we then query the base to find the id of the newly inserted producer
-    let producer = wikibase
-        .client
-        .sparql
-        .get_producer_id(label)
-        .expect("impossible to find producer");
-    producer.expect("no producer found")
+    wikibase
+        .get_entity_id(label)
+        .expect("impossible to find producer")
+}
+
+fn test_create_custom_property(wikibase: &utils::Wikibase, docker: &utils::DockerContainerWrapper) {
+    let label = "Custom property";
+    // we test the creation of a custom property using the `entity` cli tool
+    let add_entity = || {
+        utils::run(
+            "entities",
+            &[
+                "create",
+                label,
+                "--type",
+                "urlproperty",
+                "--api",
+                &docker.api_endpoint,
+                "--sparql",
+                &docker.sparql_endpoint,
+            ],
+        )
+    };
+
+    add_entity();
+
+    // we then query the base to find the id of the newly inserted producer
+    let prop_id = wikibase
+        .get_entity_id(label)
+        .expect("impossible to find property");
+
+    // if we add it again, we find the same thing
+    add_entity();
+    assert_eq!(
+        wikibase
+            .get_entity_id(label)
+            .expect("impossible to find property"),
+        prop_id
+    );
 }
 
 #[test]
@@ -265,4 +301,6 @@ fn simple_test() {
         bullfrog_details.properties[&wikibase.properties().part_of].value(),
         fur_creek_res.id
     );
+
+    test_create_custom_property(&wikibase, &docker);
 }

@@ -1,7 +1,6 @@
 //! Some utilities wikibase queries to ease tests
 use crate::utils::DockerContainerWrapper;
 use std::collections::BTreeSet;
-use transit_topo::api_client::ObjectType;
 use transit_topo::sparql_client::read_id_from_url;
 
 pub struct Wikibase {
@@ -24,29 +23,32 @@ impl Wikibase {
         }
     }
 
-    pub fn properties(&self) -> &transit_topo::client::Properties {
-        &self.client.sparql.config.properties
+    pub fn properties(&self) -> &transit_topo::known_entities::Properties {
+        &self.client.sparql.known_entities.properties
     }
 
-    pub fn items(&self) -> &transit_topo::client::Items {
-        &self.client.sparql.config.items
+    pub fn items(&self) -> &transit_topo::known_entities::Items {
+        &self.client.sparql.known_entities.items
     }
 
-    pub fn exists(&self, entity: &str) -> bool {
+    pub fn get_entity_id(&self, label: &str) -> Option<String> {
         match self
             .client
             .sparql
             .sparql(
                 &["?item"],
-                &format!(r#"?item rdfs:label "{label}"@en"#, label = entity,),
+                &format!(r#"?item rdfs:label "{label}"@en"#, label = label,),
             )
             .expect("impossible to call sparql")
             .as_mut_slice()
         {
-            [] => false,
-            [_] => true,
-            val => panic!("too many valuefor entity {} : {:?} ", entity, val),
+            [] => None,
+            [e] => transit_topo::sparql_client::read_id_from_url(&e["item"]),
+            val => panic!("too many value for entity {} : {:?} ", label, val),
         }
+    }
+    pub fn exists(&self, entity: &str) -> bool {
+        self.get_entity_id(entity).is_some()
     }
 
     pub fn get_entity(&self, item: &str) -> transit_topo::entity::Entity {
@@ -57,7 +59,7 @@ impl Wikibase {
     }
 
     pub fn get_all_items_for_datasource(&self, data_source_id: &str) -> BTreeSet<DataSourceItem> {
-        let prop = &self.client.sparql.config.properties;
+        let prop = &self.client.sparql.known_entities.properties;
         let r = self
             .client
             .sparql
@@ -92,7 +94,7 @@ impl Wikibase {
     }
 
     pub fn get_producer_datasources_id(&self, producer_id: &str) -> BTreeSet<String> {
-        let prop = &self.client.sparql.config.properties;
+        let prop = &self.client.sparql.known_entities.properties;
         let r = self
             .client
             .sparql
@@ -123,7 +125,7 @@ impl Wikibase {
                 &["?topo_id"],
                 &format!(
                     "?x wdt:{topo_id} ?topo_id",
-                    topo_id = "P1" //self.client.sparql.config.items.producer TODO remove this hardcoding
+                    topo_id = "P1" //self.client.sparql.known_entities.items.producer TODO remove this hardcoding
                 ),
             )
             .expect("invalid sparql query");

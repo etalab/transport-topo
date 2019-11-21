@@ -1,5 +1,6 @@
 use crate::api_structures::*;
 use crate::entity;
+use crate::known_entities::EntitiesId;
 use anyhow::anyhow;
 use json::object;
 use regex::Regex;
@@ -34,6 +35,7 @@ pub enum ApiError {
 
 pub enum PropertyDataType {
     String,
+    Url,
     Item,
 }
 
@@ -42,6 +44,7 @@ impl std::string::ToString for PropertyDataType {
         match self {
             Self::String => "string".to_owned(),
             Self::Item => "wikibase-item".to_owned(),
+            Self::Url => "url".to_owned(),
         }
     }
 }
@@ -62,13 +65,13 @@ impl std::string::ToString for ObjectType {
 
 pub struct ApiClient {
     client: reqwest::Client,
-    pub config: crate::client::EntitiesId,
+    pub known_entities: EntitiesId,
     endpoint: String,
     token: String,
 }
 
 impl ApiClient {
-    pub fn new(endpoint: &str, config: crate::client::EntitiesId) -> Result<Self, ApiError> {
+    pub fn new(endpoint: &str, known_entities: EntitiesId) -> Result<Self, ApiError> {
         let client = reqwest::Client::new();
         let res = client
             .get(endpoint)
@@ -77,7 +80,7 @@ impl ApiClient {
             .json::<TokenResponse>()?;
         Ok(ApiClient {
             client,
-            config,
+            known_entities,
             endpoint: endpoint.to_owned(),
             token: res.query.tokens.csrftoken,
         })
@@ -233,13 +236,16 @@ impl ApiClient {
         let label = format!("Data source for {} - imported {}", &producer, dt);
 
         let mut claims = vec![
-            claim_item(&self.config.properties.produced_by, producer),
-            claim_string(&self.config.properties.source, path),
-            claim_string(&self.config.properties.file_format, "GTFS"),
-            claim_string(&self.config.properties.tool_version, crate::GIT_VERSION),
+            claim_item(&self.known_entities.properties.produced_by, producer),
+            claim_string(&self.known_entities.properties.source, path),
+            claim_string(&self.known_entities.properties.file_format, "GTFS"),
+            claim_string(
+                &self.known_entities.properties.tool_version,
+                crate::GIT_VERSION,
+            ),
         ];
         if let Some(sha) = sha_256 {
-            claims.push(claim_string(&self.config.properties.sha_256, sha));
+            claims.push(claim_string(&self.known_entities.properties.sha_256, sha));
         }
 
         self.create_object(ObjectType::Item, &label, claims)
@@ -260,16 +266,22 @@ impl ApiClient {
         let label = format!("{:?} {} ({})", route.route_type, route_name, producer_name);
         let claims = vec![
             claim_item(
-                &self.config.properties.instance_of,
-                &self.config.items.route,
+                &self.known_entities.properties.instance_of,
+                &self.known_entities.items.route,
             ),
-            claim_string(&self.config.properties.gtfs_id, &route.id),
-            claim_item(&self.config.properties.data_source, data_source_id),
-            claim_string(&self.config.properties.gtfs_short_name, &route.short_name),
-            claim_string(&self.config.properties.gtfs_long_name, &route.long_name),
+            claim_string(&self.known_entities.properties.gtfs_id, &route.id),
+            claim_item(&self.known_entities.properties.data_source, data_source_id),
+            claim_string(
+                &self.known_entities.properties.gtfs_short_name,
+                &route.short_name,
+            ),
+            claim_string(
+                &self.known_entities.properties.gtfs_long_name,
+                &route.long_name,
+            ),
             claim_item(
-                &self.config.properties.has_physical_mode,
-                self.config.physical_mode(route),
+                &self.known_entities.properties.has_physical_mode,
+                self.known_entities.physical_mode(route),
             ),
         ];
 
@@ -283,12 +295,12 @@ impl ApiClient {
     ) -> Result<String, ApiError> {
         let claims = vec![
             claim_item(
-                &self.config.properties.instance_of,
-                &self.config.location_type(stop),
+                &self.known_entities.properties.instance_of,
+                &self.known_entities.location_type(stop),
             ),
-            claim_string(&self.config.properties.gtfs_id, &stop.id),
-            claim_item(&self.config.properties.data_source, data_source_id),
-            claim_string(&self.config.properties.gtfs_name, &stop.name),
+            claim_string(&self.known_entities.properties.gtfs_id, &stop.id),
+            claim_item(&self.known_entities.properties.data_source, data_source_id),
+            claim_string(&self.known_entities.properties.gtfs_name, &stop.name),
         ];
 
         self.create_object(ObjectType::Item, &stop.name, claims)
