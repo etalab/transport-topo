@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use regex::Regex;
 use structopt::StructOpt;
-use transit_topo::{api_client, sparql_client::read_id_from_url, Client};
+use transit_topo::{
+    clients::{api_client, sparql_client::read_id_from_url},
+    Client,
+};
 
 use clap::arg_enum;
 
@@ -191,7 +194,7 @@ fn search(
     Ok(res
         .into_iter()
         .filter_map(|mut r| r.remove("item"))
-        .filter_map(|u| transit_topo::sparql_client::read_id_from_url(&u))
+        .filter_map(|u| read_id_from_url(&u))
         .collect())
 }
 

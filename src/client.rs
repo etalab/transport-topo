@@ -1,5 +1,5 @@
-use crate::api_client::ApiClient;
-use crate::sparql_client::SparqlClient;
+use crate::clients::api_client;
+use crate::clients::{ApiClient, SparqlClient};
 use anyhow::Context;
 use anyhow::Error;
 use log::{info, warn};
@@ -141,7 +141,7 @@ impl Client {
                         continue;
                     }
                 };
-                let claim = crate::api_client::claim_item(
+                let claim = api_client::claim_item(
                     &self.sparql.known_entities.properties.part_of,
                     parent_wikibase_id,
                 );

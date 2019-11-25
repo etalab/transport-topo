@@ -1,4 +1,4 @@
-use crate::api_structures::*;
+use crate::clients::api_structures::*;
 use crate::entity;
 use crate::known_entities::EntitiesId;
 use anyhow::anyhow;

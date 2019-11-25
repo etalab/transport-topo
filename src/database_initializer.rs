@@ -1,7 +1,6 @@
-use crate::api_client::{
-    claim_item, claim_string, ApiClient, ApiError, ObjectType, PropertyDataType,
-};
 use crate::client::Client;
+use crate::clients::api_client::{claim_item, claim_string, ApiError};
+use crate::clients::{ApiClient, ObjectType, PropertyDataType};
 use crate::known_entities::{EntitiesId, Items, Properties};
 use anyhow::Error;
 use inflector::Inflector;

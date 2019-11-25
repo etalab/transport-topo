@@ -1,7 +1,7 @@
 //! Some utilities wikibase queries to ease tests
 use crate::utils::DockerContainerWrapper;
 use std::collections::BTreeSet;
-use transit_topo::sparql_client::read_id_from_url;
+use transit_topo::clients::sparql_client::read_id_from_url;
 
 pub struct Wikibase {
     pub client: transit_topo::Client,
@@ -43,7 +43,7 @@ impl Wikibase {
             .as_mut_slice()
         {
             [] => None,
-            [e] => transit_topo::sparql_client::read_id_from_url(&e["item"]),
+            [e] => read_id_from_url(&e["item"]),
             val => panic!("too many value for entity {} : {:?} ", label, val),
         }
     }
@@ -109,10 +109,7 @@ impl Wikibase {
             .expect("invalid sparql query");
 
         r.into_iter()
-            .map(|hashmap| {
-                transit_topo::sparql_client::read_id_from_url(&hashmap["data_source"])
-                    .expect("invalid id")
-            })
+            .map(|hashmap| read_id_from_url(&hashmap["data_source"]).expect("invalid id"))
             .collect()
     }
 
