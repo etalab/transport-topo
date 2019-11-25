@@ -3,7 +3,8 @@ use regex::Regex;
 use structopt::StructOpt;
 use transit_topo::{
     clients::{api_client, sparql_client::read_id_from_url},
-    Client,
+    topo_query::TopoQuery,
+    GtfsImporter,
 };
 
 use clap::arg_enum;
@@ -50,8 +51,8 @@ enum Opt {
         topo_id_id: String,
 
         /// Endpoint of the wikibase api
-        #[structopt(short, long, default_value = "http://localhost:8181/api.php")]
-        api: String,
+        #[structopt(short = "a", long = "api")]
+        _api: Option<String>,
 
         /// Endpoint of the sparql query serive
         #[structopt(short, long, default_value = "http://localhost:8989/bigdata/sparql")]
@@ -160,18 +161,13 @@ fn parse_claims(
     Ok(replace_known_entities(claims?, entities))
 }
 
-fn search(
-    topo_id_id: &str,
-    api: &str,
-    sparql: &str,
-    claims: &[String],
-) -> Result<Vec<String>, anyhow::Error> {
+fn search(topo_id_id: &str, sparql: &str, claims: &[String]) -> Result<Vec<String>, anyhow::Error> {
     if claims.is_empty() {
         return Err(anyhow::anyhow!("no claims provided, cannot find anything"));
     }
-    let client = Client::new(api, sparql, topo_id_id)?;
+    let query = TopoQuery::new(sparql, topo_id_id)?;
 
-    let claims = parse_claims(claims, &client.sparql.known_entities)?;
+    let claims = parse_claims(claims, &query.known_entities)?;
 
     let where_clause = format!(
         "?item {claims}.",
@@ -189,7 +185,7 @@ fn search(
             .join("; ")
     );
 
-    let res = client.sparql.sparql(&["?item"], &where_clause)?;
+    let res = query.client.sparql(&["?item"], &where_clause)?;
 
     Ok(res
         .into_iter()
@@ -207,9 +203,9 @@ fn create_entity(
     unique_claims: &[String],
     claims: &[String],
 ) -> Result<String, anyhow::Error> {
-    let client = Client::new(api, sparql, topo_id_id)?;
+    let importer = GtfsImporter::new(api, sparql, topo_id_id)?;
 
-    let parsed_unique_claims = parse_claims(unique_claims, &client.sparql.known_entities)?;
+    let parsed_unique_claims = parse_claims(unique_claims, &importer.query.known_entities)?;
 
     let where_clause = format!(
         r#"?item rdfs:label "{}"@en; {}."#,
@@ -220,8 +216,9 @@ fn create_entity(
             .join("; ")
     );
     // We check that there is not yet an entity with this label
-    match client
-        .sparql
+    match importer
+        .query
+        .client
         .sparql(&["?item"], &where_clause)?
         .into_iter()
         .filter_map(|r| read_id_from_url(&r["item"]))
@@ -239,7 +236,7 @@ fn create_entity(
         }
         [] => {
             log::info!("no entity \"{}\" exists, creating one", label);
-            let claims: Vec<_> = parse_claims(claims, &client.sparql.known_entities)?
+            let claims: Vec<_> = parse_claims(claims, &importer.query.known_entities)?
                 .iter()
                 .chain(parsed_unique_claims.iter())
                 .map(|(prop, value)| {
@@ -259,9 +256,11 @@ fn create_entity(
                 .collect();
 
             log::debug!("creating entity \"{}\" with claims {:?}", label, &claims);
-            let id = client
-                .api
-                .create_object(entity_type.get_object_type(), label, claims)?;
+            let id =
+                importer
+                    .writer
+                    .client
+                    .create_object(entity_type.get_object_type(), label, claims)?;
             log::info!("created entity \"{}\" with id {}", label, id);
             Ok(id.to_owned())
         }
@@ -287,11 +286,11 @@ fn main() {
     match opt {
         Opt::Search {
             topo_id_id,
-            api,
+            _api,
             sparql,
             claims,
         } => {
-            let ids = search(&topo_id_id, &api, &sparql, &claims).expect("impossible to search:");
+            let ids = search(&topo_id_id, &sparql, &claims).expect("impossible to search:");
             for id in ids {
                 println!("{}", id);
             }

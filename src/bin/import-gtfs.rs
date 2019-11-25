@@ -1,5 +1,5 @@
 use structopt::StructOpt;
-use transit_topo::Client;
+use transit_topo::GtfsImporter;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "import-gtfs")]
@@ -32,17 +32,17 @@ fn main() {
     transit_topo::log::init();
 
     let opt = Opt::from_args();
-    let client = Client::new(&opt.api, &opt.sparql, &opt.topo_id_id).unwrap();
+    let importer = GtfsImporter::new(&opt.api, &opt.sparql, &opt.topo_id_id).unwrap();
 
     log::info!("Searching the producer by id");
-    let producer_label = client
-        .sparql
+    let producer_label = importer
+        .query
         .get_producer_label(&opt.producer)
         .expect("unable to search for producer")
         .unwrap_or_else(|| panic!("no producer with id {}", &opt.producer));
     log::info!("Found the producer “{}”", &producer_label);
     log::info!("Starting the importation of lines");
-    client
+    importer
         .import_gtfs(&opt.gtfs_filename, &opt.producer, &producer_label)
         .expect("unable to import");
 }

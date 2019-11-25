@@ -2,9 +2,12 @@
 use crate::utils::DockerContainerWrapper;
 use std::collections::BTreeSet;
 use transit_topo::clients::sparql_client::read_id_from_url;
+use transit_topo::topo_query::TopoQuery;
+use transit_topo::topo_writer::TopoWriter;
 
 pub struct Wikibase {
-    pub client: transit_topo::Client,
+    pub writer: TopoWriter,
+    pub query: TopoQuery,
 }
 
 #[derive(Hash, Debug, Ord, PartialOrd, Eq, PartialEq)]
@@ -17,24 +20,27 @@ pub struct DataSourceItem {
 
 impl Wikibase {
     pub fn new(docker: &DockerContainerWrapper) -> Self {
+        let query = TopoQuery::new(&docker.sparql_endpoint, "P1")
+            .expect("impossible to create sparql client");
         Self {
-            client: transit_topo::Client::new(&docker.api_endpoint, &docker.sparql_endpoint, "P1")
-                .expect("impossible to create wikibase client"),
+            writer: TopoWriter::new(&docker.api_endpoint, query.known_entities.clone())
+                .expect("impossible to create api client"),
+            query,
         }
     }
 
     pub fn properties(&self) -> &transit_topo::known_entities::Properties {
-        &self.client.sparql.known_entities.properties
+        &self.query.known_entities.properties
     }
 
     pub fn items(&self) -> &transit_topo::known_entities::Items {
-        &self.client.sparql.known_entities.items
+        &self.query.known_entities.items
     }
 
     pub fn get_entity_id(&self, label: &str) -> Option<String> {
         match self
+            .query
             .client
-            .sparql
             .sparql(
                 &["?item"],
                 &format!(r#"?item rdfs:label "{label}"@en"#, label = label,),
@@ -52,17 +58,17 @@ impl Wikibase {
     }
 
     pub fn get_entity(&self, item: &str) -> transit_topo::entity::Entity {
-        self.client
-            .api
+        self.writer
+            .client
             .get_entity(item)
             .expect("impossible to find entity")
     }
 
     pub fn get_all_items_for_datasource(&self, data_source_id: &str) -> BTreeSet<DataSourceItem> {
-        let prop = &self.client.sparql.known_entities.properties;
+        let prop = &self.query.known_entities.properties;
         let r = self
+            .query
             .client
-            .sparql
             .sparql(
                 &["?gtfs_id ?item ?item_label ?type_label"],
                 &format!(
@@ -94,10 +100,10 @@ impl Wikibase {
     }
 
     pub fn get_producer_datasources_id(&self, producer_id: &str) -> BTreeSet<String> {
-        let prop = &self.client.sparql.known_entities.properties;
+        let prop = &self.query.known_entities.properties;
         let r = self
+            .query
             .client
-            .sparql
             .sparql(
                 &["?data_source"],
                 &format!(
@@ -116,13 +122,13 @@ impl Wikibase {
     /// get all objects with a topo id
     pub fn get_topo_objects(&self) -> BTreeSet<String> {
         let r = self
+            .query
             .client
-            .sparql
             .sparql(
                 &["?topo_id"],
                 &format!(
                     "?x wdt:{topo_id} ?topo_id",
-                    topo_id = "P1" //self.client.sparql.known_entities.items.producer TODO remove this hardcoding
+                    topo_id = self.query.known_entities.properties.topo_id_id
                 ),
             )
             .expect("invalid sparql query");

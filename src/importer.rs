@@ -1,31 +1,22 @@
 use crate::clients::api_client;
-use crate::clients::{ApiClient, SparqlClient};
+use crate::topo_query::TopoQuery;
+use crate::topo_writer::TopoWriter;
 use anyhow::Context;
 use anyhow::Error;
 use log::{info, warn};
 
-pub struct Client {
-    pub api: ApiClient,
-    pub sparql: SparqlClient,
+pub struct GtfsImporter {
+    pub writer: TopoWriter,
+    pub query: TopoQuery,
 }
 
-impl Client {
+impl GtfsImporter {
     pub fn new(api_endpoint: &str, sparql_enpoint: &str, topo_id_id: &str) -> Result<Self, Error> {
-        let sparql = SparqlClient::new(sparql_enpoint, topo_id_id)
-            .context("impossible to create sparql client")?;
+        let query = TopoQuery::new(sparql_enpoint, topo_id_id)
+            .context("impossible to create query client")?;
         Ok(Self {
-            api: ApiClient::new(api_endpoint, sparql.known_entities.clone())?,
-            sparql,
-        })
-    }
-
-    pub fn new_without_known_entities(
-        api_endpoint: &str,
-        sparql_enpoint: &str,
-    ) -> Result<Self, Error> {
-        Ok(Self {
-            api: ApiClient::new(api_endpoint, Default::default())?,
-            sparql: SparqlClient::new_without_known_entities(sparql_enpoint),
+            writer: TopoWriter::new(api_endpoint, query.known_entities.clone())?,
+            query,
         })
     }
 
@@ -39,7 +30,7 @@ impl Client {
 
         log::info!("import gtfs version {}", crate::GIT_VERSION);
         let data_source_id =
-            self.api
+            self.writer
                 .insert_data_source(&gtfs.sha256, &producer_id, gtfs_filename)?;
 
         let routes = gtfs.routes.map_err(|e| e.compat())?;
@@ -59,14 +50,14 @@ impl Client {
         producer_name: &str,
     ) -> Result<(), anyhow::Error> {
         for route in routes {
-            let r = self.sparql.find_route(&producer_id, &route.id)?;
+            let r = self.query.find_route(&producer_id, &route.id)?;
             match r.as_slice() {
                 [] => {
                     info!(
                         "Route “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
-                    self.api
+                    self.writer
                         .insert_route(&route, &data_source_id, producer_name)?;
                 }
                 [e] => {
@@ -93,14 +84,14 @@ impl Client {
         stops
             .iter()
             .map(|stop| {
-                let s = self.sparql.find_stop(&producer_id, &stop)?;
+                let s = self.query.find_stop(&producer_id, &stop)?;
                 match s.as_slice() {
                     [] => {
                         info!(
                             "Stop “{}” ({}) does not exist, inserting",
                             stop.name, stop.id
                         );
-                        let wikibase_id = self.api.insert_stop(&stop, &data_source_id)?;
+                        let wikibase_id = self.writer.insert_stop(&stop, &data_source_id)?;
                         Ok((stop.id.to_owned(), wikibase_id))
                     }
                     [e] => {
@@ -142,10 +133,10 @@ impl Client {
                     }
                 };
                 let claim = api_client::claim_item(
-                    &self.sparql.known_entities.properties.part_of,
+                    &self.query.known_entities.properties.part_of,
                     parent_wikibase_id,
                 );
-                self.api.add_claims(child_wikibase_id, vec![claim])?;
+                self.writer.client.add_claims(child_wikibase_id, vec![claim])?;
             }
         }
         Ok(())
