@@ -18,8 +18,6 @@ lazy_static::lazy_static! {
 pub enum ApiError {
     #[error("{label} already exists, id = {id}")]
     PropertyAlreadyExists { label: String, id: String },
-    #[error("{0} is not a valid producer id")]
-    InvalidProducer(String),
     #[error("Several items with label {0}")]
     TooManyItems(String),
     #[error("Cannot find entiy {0}")]
