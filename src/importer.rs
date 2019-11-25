@@ -136,7 +136,9 @@ impl GtfsImporter {
                     &self.query.known_entities.properties.part_of,
                     parent_wikibase_id,
                 );
-                self.writer.client.add_claims(child_wikibase_id, vec![claim])?;
+                self.writer
+                    .client
+                    .add_claims(child_wikibase_id, vec![claim])?;
             }
         }
         Ok(())

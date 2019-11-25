@@ -256,11 +256,11 @@ fn create_entity(
                 .collect();
 
             log::debug!("creating entity \"{}\" with claims {:?}", label, &claims);
-            let id =
-                importer
-                    .writer
-                    .client
-                    .create_object(entity_type.get_object_type(), label, claims)?;
+            let id = importer.writer.client.create_object(
+                entity_type.get_object_type(),
+                label,
+                claims,
+            )?;
             log::info!("created entity \"{}\" with id {}", label, id);
             Ok(id.to_owned())
         }

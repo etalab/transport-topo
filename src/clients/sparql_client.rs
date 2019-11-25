@@ -1,22 +1,5 @@
 use itertools::Itertools;
 use std::collections::HashMap;
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum SparqlError {
-    #[error("No entity with topo id {0} found")]
-    TopoIdNotFound(String),
-    #[error("Several entities with topo id {0}")]
-    DuplicatedTopoId(String),
-    #[error("Impossible to query: {0}")]
-    ReqwestError(#[from] reqwest::Error),
-    #[error("Invalid json: {0}")]
-    InvalidJsonError(#[from] json::Error),
-    #[error("Error parsing the id {0} for entity with topo id {1}")]
-    TopoInvalidId(String, String),
-    #[error("Too many elements {0}")]
-    Duplicate(String),
-}
 
 pub fn read_id_from_url(url: &str) -> Option<String> {
     url.split('/')
@@ -31,7 +14,7 @@ pub struct SparqlClient {
 }
 
 impl SparqlClient {
-    /// create a new client and discory all the base entities id
+    /// create a new client and discover all the base entities id
     pub fn new(endpoint: &str) -> Self {
         Self {
             client: reqwest::Client::new(),
@@ -39,7 +22,7 @@ impl SparqlClient {
         }
     }
 
-    fn query(&self, query: &str) -> Result<json::JsonValue, SparqlError> {
+    fn query(&self, query: &str) -> Result<json::JsonValue, anyhow::Error> {
         log::debug!("Sparql query: {}", query);
         let response = self
             .client
@@ -56,7 +39,7 @@ impl SparqlClient {
         &self,
         variables: &[&str],
         where_clause: &str,
-    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
+    ) -> Result<Vec<HashMap<String, String>>, anyhow::Error> {
         let vars = variables.iter().format(" ");
         let query = format!("SELECT {} WHERE {{ {} SERVICE wikibase:label {{ bd:serviceParam wikibase:language \"en\". }} }}", vars, where_clause);
         let res = self.query(&query)?;

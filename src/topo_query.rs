@@ -1,11 +1,26 @@
-use crate::clients::sparql_client::{read_id_from_url, SparqlClient, SparqlError};
+use crate::clients::sparql_client::{read_id_from_url, SparqlClient};
 use crate::known_entities::{EntitiesId, Items, Properties};
 use anyhow::Context;
 use std::collections::HashMap;
+use thiserror::Error;
 
 pub struct TopoQuery {
     pub client: SparqlClient,
     pub known_entities: EntitiesId,
+}
+
+#[derive(Debug, Error)]
+pub enum QueryError {
+    #[error("No entity with topo id {0} found")]
+    TopoIdNotFound(String),
+    #[error("Several entities with topo id {0}")]
+    DuplicatedTopoId(String),
+    #[error("sparql error: {0}")]
+    ReqwestError(#[from] anyhow::Error),
+    #[error("Error parsing the id {0} for entity with topo id {1}")]
+    TopoInvalidId(String, String),
+    #[error("Too many elements {0}")]
+    Duplicate(String),
 }
 
 impl TopoQuery {
@@ -24,9 +39,9 @@ impl TopoQuery {
         &self,
         producer_id: &str,
         gtfs_id: &str,
-    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
+    ) -> Result<Vec<HashMap<String, String>>, QueryError> {
         log::trace!("Finding route {} of producer {}", gtfs_id, producer_id);
-        self.client.sparql(
+        Ok(self.client.sparql(
             &[
                 "?route",
                 "?routeLabel",
@@ -49,21 +64,21 @@ impl TopoQuery {
                 gtfs_id = gtfs_id,
                 producer_id = producer_id,
             ),
-        )
+        )?)
     }
 
     pub fn find_stop(
         &self,
         producer_id: &str,
         stop: &gtfs_structures::Stop,
-    ) -> Result<Vec<HashMap<String, String>>, SparqlError> {
+    ) -> Result<Vec<HashMap<String, String>>, QueryError> {
         log::trace!(
             "Finding stop {} {} of producer {}",
             stop.name,
             stop.id,
             producer_id
         );
-        self.client.sparql(
+        Ok(self.client.sparql(
             &["?stop", "?stopLabel", "?stopName", "?gtfs_id"],
             &format!(
                 "?stop wdt:{instance_of} wd:{stop_type}.
@@ -80,26 +95,25 @@ impl TopoQuery {
                 gtfs_id = stop.id,
                 producer_id = producer_id,
             ),
-        )
+        )?)
     }
 
-    pub fn get_producer_label(&self, producer_id: &str) -> Result<Option<String>, SparqlError> {
-        self.client
-            .sparql(
-                &["?label"],
-                &format!(
-                    "wd:{producer_id} wdt:{instance_of} wd:{producer};
+    pub fn get_producer_label(&self, producer_id: &str) -> Result<Option<String>, QueryError> {
+        let mut items = self.client.sparql(
+            &["?label"],
+            &format!(
+                "wd:{producer_id} wdt:{instance_of} wd:{producer};
                                   rdfs:label ?label.",
-                    producer_id = producer_id,
-                    instance_of = self.known_entities.properties.instance_of,
-                    producer = self.known_entities.items.producer
-                ),
-            )
-            .and_then(|mut items| match items.as_mut_slice() {
-                [] => Ok(None),
-                [item] => Ok(item.remove("label")),
-                _ => Err(SparqlError::Duplicate(producer_id.to_string())),
-            })
+                producer_id = producer_id,
+                instance_of = self.known_entities.properties.instance_of,
+                producer = self.known_entities.items.producer
+            ),
+        )?;
+        match items.as_mut_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.remove("label")),
+            _ => Err(QueryError::Duplicate(producer_id.to_string())),
+        }
     }
 }
 
@@ -110,25 +124,22 @@ fn find_entity_by_topo_id(
     client: &SparqlClient,
     item_topo_id: &str,
     topo_id_id: &str,
-) -> Result<String, SparqlError> {
-    client
-        .sparql(
-            &["?item_id"],
-            &format!(
-                "?item_id wdt:{topo_id_id} '{item_topo_id}'",
-                topo_id_id = topo_id_id,
-                item_topo_id = item_topo_id
-            ),
-        )
-        .and_then(|items| match items.as_slice() {
-            [] => Err(SparqlError::TopoIdNotFound(item_topo_id.to_string())),
-            [item] => Ok(item["item_id"].to_owned()),
-            _ => Err(SparqlError::DuplicatedTopoId(item_topo_id.to_string())),
-        })
-        .and_then(|id| {
-            read_id_from_url(&id)
-                .ok_or_else(|| SparqlError::TopoInvalidId(id, item_topo_id.to_string()))
-        })
+) -> Result<String, QueryError> {
+    let items = client.sparql(
+        &["?item_id"],
+        &format!(
+            "?item_id wdt:{topo_id_id} '{item_topo_id}'",
+            topo_id_id = topo_id_id,
+            item_topo_id = item_topo_id
+        ),
+    )?;
+
+    let id = match items.as_slice() {
+        [] => Err(QueryError::TopoIdNotFound(item_topo_id.to_string())),
+        [item] => Ok(item["item_id"].to_owned()),
+        _ => Err(QueryError::DuplicatedTopoId(item_topo_id.to_string())),
+    }?;
+    read_id_from_url(&id).ok_or_else(|| QueryError::TopoInvalidId(id, item_topo_id.to_string()))
 }
 
 fn discover_known_entities(
