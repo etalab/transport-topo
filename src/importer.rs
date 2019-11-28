@@ -3,7 +3,7 @@ use crate::topo_query::TopoQuery;
 use crate::topo_writer::TopoWriter;
 use anyhow::Context;
 use anyhow::Error;
-use log::{info, warn};
+use log::info;
 
 pub struct GtfsImporter {
     pub writer: TopoWriter,
@@ -48,8 +48,8 @@ impl GtfsImporter {
         data_source_id: &str,
         producer_id: &str,
         producer_name: &str,
-    ) -> Result<(), anyhow::Error> {
-        for route in routes {
+    ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
+        routes.iter().map(|route| {
             let r = self.query.find_route(&producer_id, &route.id)?;
             match r.as_slice() {
                 [] => {
@@ -57,22 +57,23 @@ impl GtfsImporter {
                         "Route “{}” ({}) does not exist, inserting",
                         route.long_name, route.short_name
                     );
-                    self.writer
+                    let wikibase_id = self.writer
                         .insert_route(&route, &data_source_id, producer_name)?;
+                        Ok((route.id.to_owned(), wikibase_id))
                 }
                 [e] => {
                     info!(
                         "Route “{}” ({}) already exists with id {}, skipping",
                         route.long_name, route.short_name, e["route"]
                     );
+                    Ok((route.id.to_owned(), e["route"].to_owned()))
                 }
-                _ => warn!(
+                _ => Err(anyhow::anyhow!(
                     "Route “{}” ({}) exists many times. Something is not right",
                     route.long_name, route.short_name
-                ),
+                )),
             }
-        }
-        Ok(())
+        }).collect()
     }
 
     pub fn import_stops(
