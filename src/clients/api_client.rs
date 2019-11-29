@@ -122,6 +122,13 @@ impl ApiClient {
                         let val = match data_value {
                             Datavalue::String(s) => entity::PropertyValue::String(s),
                             Datavalue::Item { id } => entity::PropertyValue::Item(id),
+                            Datavalue::Coord {
+                                latitude,
+                                longitude,
+                            } => entity::PropertyValue::Coord {
+                                latitude,
+                                longitude,
+                            },
                         };
                         Ok((prop_id, val))
                     })
@@ -302,6 +309,7 @@ pub fn claim_coord(property: &str, lon: f64, lat: f64) -> Option<serde_json::Val
             "value": {
                 "latitude": lat,
                 "longitude": lon,
+                "precision": 0.000_001,
                 "globe": "http://www.wikidata.org/entity/Q2"
             },
             "type": "globecoordinate",

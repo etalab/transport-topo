@@ -1,4 +1,4 @@
-use crate::clients::api_client::{claim_item, claim_string, ApiClient};
+use crate::clients::api_client::{claim_coord, claim_item, claim_string, ApiClient};
 use crate::clients::ObjectType;
 use crate::known_entities::EntitiesId;
 use anyhow::Context;
@@ -95,6 +95,11 @@ impl TopoWriter {
             claim_string(&self.known_entities.properties.gtfs_id, &stop.id),
             claim_item(&self.known_entities.properties.data_source, data_source_id),
             claim_string(&self.known_entities.properties.gtfs_name, &stop.name),
+            claim_coord(
+                &self.known_entities.properties.coordinate_location,
+                stop.longitude,
+                stop.latitude,
+            ),
         ];
 
         self.client

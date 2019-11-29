@@ -1,6 +1,7 @@
 mod utils;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
+use transit_topo::entity::PropertyValue;
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
     // we first check that our exists method cannot find a unknown object
@@ -156,6 +157,7 @@ fn simple_test() {
 
     let wikibase = utils::Wikibase::new(&docker);
     check_initiale_state(&wikibase);
+    let properties = &wikibase.query.known_entities.properties;
 
     // We call again the prepopulate, there shouldn't be any differences
     // since it should be idempotent
@@ -232,6 +234,22 @@ fn simple_test() {
     assert_eq!(instance_of("BEATTY_AIRPORT"), "Stop entrance");
     assert_eq!(instance_of("BULLFROG"), "Stop generic node");
     assert_eq!(instance_of("STAGECOACH"), "Stop boarding area");
+
+    let fur_creek =
+        find_by_gtfs_id("FUR_CREEK_RES").expect(&format!("impossible to find FUR_CREEK_RES"));
+    assert_eq!(fur_creek.label, "Furnace Creek Resort (Demo)".to_owned());
+    let raw_fur_creek = wikibase.get_entity(&fur_creek.id);
+    let location = &raw_fur_creek.properties[&properties.coordinate_location];
+    match location {
+        PropertyValue::Coord {
+            latitude,
+            longitude,
+        } => {
+            assert!((latitude - 36.425288).abs() < 0.00001);
+            assert!((longitude - (-117.133162)).abs() < 0.00001);
+        }
+        _ => panic!("bad format"),
+    }
 
     // we reimport the gtfs
     import_gtfs(&docker, &producer_id);
