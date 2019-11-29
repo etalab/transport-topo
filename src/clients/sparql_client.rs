@@ -22,7 +22,7 @@ impl SparqlClient {
         }
     }
 
-    fn query(&self, query: &str) -> Result<json::JsonValue, anyhow::Error> {
+    fn query(&self, query: &str) -> Result<serde_json::Value, anyhow::Error> {
         log::debug!("Sparql query: {}", query);
         let response = self
             .client
@@ -32,7 +32,7 @@ impl SparqlClient {
             .error_for_status()?
             .text()?;
         log::trace!("Query response: {:?}", response);
-        Ok(json::parse(&response)?)
+        Ok(serde_json::from_str(&response)?)
     }
 
     pub fn sparql(
@@ -45,9 +45,15 @@ impl SparqlClient {
         let res = self.query(&query)?;
 
         let mut result = Vec::new();
-        for binding in res["results"]["bindings"].members() {
+        for binding in res
+            .pointer("/results/bindings")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| anyhow::anyhow!("invalid json, no bindings"))?
+        {
             let values = binding
-                .entries()
+                .as_object()
+                .ok_or_else(|| anyhow::anyhow!("invalid json, bindings badly formated"))?
+                .iter()
                 .map(|(k, v)| (k.to_string(), v["value"].as_str().unwrap_or("").into()))
                 .collect();
             result.push(values);

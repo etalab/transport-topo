@@ -10,7 +10,6 @@ ansi_term = "0.12"
 gtfs-structures = "0.15"
 Inflector = { version="0.11", default-features=false }
 itertools = "0.8"
-json = "0.12"
 log = "0.4"
 pretty_env_logger = "0.3"
 reqwest = "0.9"
