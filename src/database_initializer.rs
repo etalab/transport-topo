@@ -137,6 +137,7 @@ pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<Ent
             tool_version: create_prop("Tool version", PropertyDataType::String)?,
             part_of: create_prop("Part of", PropertyDataType::Item)?,
             connecting_line: create_prop("Connecting line", PropertyDataType::Item)?,
+            coordinate_location: create_prop("Coordinate location", PropertyDataType::Coord)?,
         },
         items: Items {
             physical_mode: physical_mode.to_owned(),

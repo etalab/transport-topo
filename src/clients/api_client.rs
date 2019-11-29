@@ -34,6 +34,7 @@ pub enum PropertyDataType {
     String,
     Url,
     Item,
+    Coord,
 }
 
 impl std::string::ToString for PropertyDataType {
@@ -42,6 +43,7 @@ impl std::string::ToString for PropertyDataType {
             Self::String => "string".to_owned(),
             Self::Item => "wikibase-item".to_owned(),
             Self::Url => "url".to_owned(),
+            Self::Coord => "globe-coordinate".to_owned(),
         }
     }
 }
@@ -292,5 +294,17 @@ pub fn claim_item(property: &str, id: &str) -> Option<serde_json::Value> {
         }),
     )
 }
+
+pub fn claim_coord(property: &str, lon: f64, lat: f64) -> Option<serde_json::Value> {
+    claim(
+        property,
+        json!({
+            "value": {
+                "latitude": lat,
+                "longitude": lon,
+                "globe": "http://www.wikidata.org/entity/Q2"
+            },
+            "type": "globecoordinate",
+        }),
     )
 }

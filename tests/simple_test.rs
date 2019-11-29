@@ -25,6 +25,7 @@ fn check_initiale_state(wikibase: &utils::Wikibase) {
             "bus".to_owned(),
             "cable_car".to_owned(),
             "connecting_line".to_owned(),
+            "coordinate_location".to_owned(),
             "data_source".to_owned(),
             "ferry".to_owned(),
             "file_format".to_owned(),
