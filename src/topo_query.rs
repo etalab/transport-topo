@@ -28,7 +28,7 @@ impl TopoQuery {
     pub fn new(endpoint: &str, topo_id_id: &str) -> Result<Self, anyhow::Error> {
         let client = SparqlClient::new(endpoint);
         let known_entities = discover_known_entities(&client, topo_id_id)
-            .context("impossible to discovery config")?;
+            .context("impossible to discover config")?;
         Ok(Self {
             client,
             known_entities,

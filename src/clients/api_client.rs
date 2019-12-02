@@ -115,24 +115,26 @@ impl ApiClient {
                     .unwrap()
                     .into_iter()
                     .map(|(prop_id, claims)| {
-                        let claim = claims.into_iter().next().ok_or_else(|| {
-                            ApiError::GenericError("invalid response, no claims".to_owned())
-                        })?;
-                        let data_value = claim.mainsnak.datavalue;
-                        let val = match data_value {
-                            Datavalue::String(s) => entity::PropertyValue::String(s),
-                            Datavalue::Item { id } => entity::PropertyValue::Item(id),
-                            Datavalue::Coord {
-                                latitude,
-                                longitude,
-                            } => entity::PropertyValue::Coord {
-                                latitude,
-                                longitude,
-                            },
-                        };
-                        Ok((prop_id, val))
+                        let vals = claims
+                            .into_iter()
+                            .map(|claim| {
+                                let data_value = claim.mainsnak.datavalue;
+                                match data_value {
+                                    Datavalue::String(s) => entity::PropertyValue::String(s),
+                                    Datavalue::Item { id } => entity::PropertyValue::Item(id),
+                                    Datavalue::Coord {
+                                        latitude,
+                                        longitude,
+                                    } => entity::PropertyValue::Coord {
+                                        latitude,
+                                        longitude,
+                                    },
+                                }
+                            })
+                            .collect();
+                        Ok((prop_id, vals))
                     })
-                    .collect::<Result<HashMap<String, entity::PropertyValue>, ApiError>>()?,
+                    .collect::<Result<HashMap<String, Vec<entity::PropertyValue>>, ApiError>>()?,
             })
         }
     }
