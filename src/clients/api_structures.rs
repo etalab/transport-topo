@@ -13,6 +13,8 @@ pub enum Datavalue {
     String(String),
     #[serde(rename = "wikibase-entityid")]
     Item { id: String },
+    #[serde(rename = "globecoordinate")]
+    Coord { latitude: f64, longitude: f64 },
 }
 
 #[derive(Deserialize, Debug)]

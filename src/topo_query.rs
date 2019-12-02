@@ -182,6 +182,7 @@ fn discover_known_entities(
             tool_version: find_entity_by_topo_id(client, "tool_version", topo_id_id)?,
             part_of: find_entity_by_topo_id(client, "part_of", topo_id_id)?,
             connecting_line: find_entity_by_topo_id(client, "connecting_line", topo_id_id)?,
+            coordinate_location: find_entity_by_topo_id(client, "coordinate_location", topo_id_id)?,
         },
     })
 }

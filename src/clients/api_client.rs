@@ -1,8 +1,8 @@
 use crate::clients::api_structures::*;
 use crate::entity;
 use anyhow::anyhow;
-use json::object;
 use regex::Regex;
+use serde_json::json;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -34,6 +34,7 @@ pub enum PropertyDataType {
     String,
     Url,
     Item,
+    Coord,
 }
 
 impl std::string::ToString for PropertyDataType {
@@ -42,6 +43,7 @@ impl std::string::ToString for PropertyDataType {
             Self::String => "string".to_owned(),
             Self::Item => "wikibase-item".to_owned(),
             Self::Url => "url".to_owned(),
+            Self::Coord => "globe-coordinate".to_owned(),
         }
     }
 }
@@ -120,6 +122,13 @@ impl ApiClient {
                         let val = match data_value {
                             Datavalue::String(s) => entity::PropertyValue::String(s),
                             Datavalue::Item { id } => entity::PropertyValue::Item(id),
+                            Datavalue::Coord {
+                                latitude,
+                                longitude,
+                            } => entity::PropertyValue::Coord {
+                                latitude,
+                                longitude,
+                            },
                         };
                         Ok((prop_id, val))
                     })
@@ -132,27 +141,28 @@ impl ApiClient {
         &self,
         object_type: ObjectType,
         label: &str,
-        extra_claims: Vec<Option<json::JsonValue>>,
+        extra_claims: Vec<Option<serde_json::Value>>,
     ) -> Result<String, ApiError> {
-        let labels = object! {
-            "en" => object!{
-                "language" => "en",
-                "value" => label
+        let labels = json!({
+            "en": {
+                "language": "en",
+                "value": label
             }
-        };
+        });
         let extra_claims: Vec<_> = extra_claims.into_iter().filter_map(|v| v).collect();
 
-        let claims = json::stringify(match &object_type {
-            ObjectType::Property(datatype) => object! {
-                "labels" => labels,
-                "datatype" => datatype.to_string(),
-                "claims" => extra_claims,
-            },
-            ObjectType::Item => object! {
-                "labels" => labels,
-                "claims" => extra_claims,
-            },
-        });
+        let json_claims = match &object_type {
+            ObjectType::Property(datatype) => json!({
+                "labels": labels,
+                "datatype": datatype.to_string(),
+                "claims": extra_claims,
+            }),
+            ObjectType::Item => json!( {
+                "labels": labels,
+                "claims": extra_claims,
+            }),
+        };
+        let claims = serde_json::to_string(&json_claims)?;
 
         log::trace!("claims: {}", claims);
         let mut res = self
@@ -216,7 +226,7 @@ impl ApiClient {
     pub fn create_item(
         &self,
         label: &str,
-        extra_claims: Vec<Option<json::JsonValue>>,
+        extra_claims: Vec<Option<serde_json::Value>>,
     ) -> Result<String, ApiError> {
         self.create_object(ObjectType::Item, label, extra_claims)
     }
@@ -237,10 +247,10 @@ impl ApiClient {
     pub fn add_claims(
         &self,
         entity_id: &str,
-        claims: Vec<Option<json::JsonValue>>,
+        claims: Vec<Option<serde_json::Value>>,
     ) -> Result<(), ApiError> {
         let claims: Vec<_> = claims.into_iter().filter_map(|v| v).collect();
-        let claims = json::stringify(object! { "claims" => claims});
+        let claims = serde_json::to_string(&json!({ "claims": claims }))?;
         log::trace!("claims: {}", claims);
         let mut res = self
             .client
@@ -261,33 +271,48 @@ impl ApiClient {
     }
 }
 
-pub fn claim(property: &str, datavalue: json::JsonValue) -> Option<json::JsonValue> {
-    Some(object! {
-        "mainsnak" => object!{
-            "snaktype" => "value",
-            "property" => property,
-            "datavalue" => datavalue
+pub fn claim(property: &str, datavalue: serde_json::Value) -> Option<serde_json::Value> {
+    Some(json!({
+        "mainsnak": {
+            "snaktype": "value",
+            "property": property,
+            "datavalue": datavalue
         },
-        "type" => "statement",
-        "rank" => "normal"
-    })
+        "type": "statement",
+        "rank": "normal"
+    }))
 }
-pub fn claim_string(property: &str, value: &str) -> Option<json::JsonValue> {
+pub fn claim_string(property: &str, value: &str) -> Option<serde_json::Value> {
     let value = value.trim();
     if value.is_empty() {
         // it's impossible to add a claim with an empty value, so we skip it
         None
     } else {
-        claim(property, object! { "value" => value, "type" => "string" })
+        claim(property, json!({ "value": value, "type": "string" }))
     }
 }
 
-pub fn claim_item(property: &str, id: &str) -> Option<json::JsonValue> {
+pub fn claim_item(property: &str, id: &str) -> Option<serde_json::Value> {
     claim(
         property,
-        object! {
-            "value" => object!{ "entity-type" => "item", "id" => id },
-            "type" => "wikibase-entityid",
-        },
+        json!({
+            "value":{ "entity-type": "item", "id": id },
+            "type": "wikibase-entityid",
+        }),
+    )
+}
+
+pub fn claim_coord(property: &str, lon: f64, lat: f64) -> Option<serde_json::Value> {
+    claim(
+        property,
+        json!({
+            "value": {
+                "latitude": lat,
+                "longitude": lon,
+                "precision": 0.000_001,
+                "globe": "http://www.wikidata.org/entity/Q2"
+            },
+            "type": "globecoordinate",
+        }),
     )
 }

@@ -2,6 +2,7 @@
 pub enum PropertyValue {
     String(String),
     Item(String),
+    Coord { latitude: f64, longitude: f64 },
 }
 
 impl PropertyValue {
@@ -9,6 +10,8 @@ impl PropertyValue {
         match self {
             PropertyValue::String(e) => e,
             PropertyValue::Item(e) => e,
+            // Note: this method is used only in tests, we can panic
+            PropertyValue::Coord { .. } => panic!("unable to convert coord to string"),
         }
     }
 }

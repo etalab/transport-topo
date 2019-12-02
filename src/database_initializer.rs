@@ -47,7 +47,7 @@ fn get_id_by_topo_id(client: &Client, topo_id: &str) -> Result<Option<String>, a
 fn get_or_create_item(
     client: &Client,
     label: &str,
-    claims: &[Option<json::JsonValue>],
+    claims: &[Option<serde_json::Value>],
 ) -> Result<String, Error> {
     let mut claims = Vec::from(claims);
     let topo_id = label.to_snake_case();
@@ -137,6 +137,7 @@ pub fn initial_populate(api_endpoint: &str, sparql_endpoint: &str) -> Result<Ent
             tool_version: create_prop("Tool version", PropertyDataType::String)?,
             part_of: create_prop("Part of", PropertyDataType::Item)?,
             connecting_line: create_prop("Connecting line", PropertyDataType::Item)?,
+            coordinate_location: create_prop("Coordinate location", PropertyDataType::Coord)?,
         },
         items: Items {
             physical_mode: physical_mode.to_owned(),
