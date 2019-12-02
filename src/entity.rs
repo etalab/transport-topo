@@ -28,6 +28,6 @@ impl std::ops::Deref for PropertyValue {
 #[derive(Debug, Clone)]
 pub struct Entity {
     pub id: String,
-    pub properties: std::collections::HashMap<String, PropertyValue>,
+    pub properties: std::collections::HashMap<String, Vec<PropertyValue>>,
     pub label: String,
 }

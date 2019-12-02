@@ -1,6 +1,7 @@
 mod utils;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
+use std::collections::BTreeSet;
 use transit_topo::entity::PropertyValue;
 
 fn check_initiale_state(wikibase: &utils::Wikibase) {
@@ -195,11 +196,10 @@ fn simple_test() {
     assert!(data_source
         .label
         .starts_with(&format!("Data source for {} - imported ", &producer_id)));
-    assert!(
-        data_source.properties[&wikibase.properties().source].ends_with("tests/fixtures/gtfs.zip")
-    );
-    assert!(!data_source.properties[&wikibase.properties().sha_256].is_empty());
-    assert!(!data_source.properties[&wikibase.properties().tool_version].is_empty());
+    assert!(data_source.properties[&wikibase.properties().source][0]
+        .ends_with("tests/fixtures/gtfs.zip"));
+    assert!(!data_source.properties[&properties.sha_256][0].is_empty());
+    assert!(!data_source.properties[&properties.tool_version][0].is_empty());
 
     let all_objects = wikibase.get_all_items_for_datasource(data_source_id);
     assert_eq!(all_objects.len(), 14);
@@ -239,7 +239,7 @@ fn simple_test() {
         find_by_gtfs_id("FUR_CREEK_RES").expect(&format!("impossible to find FUR_CREEK_RES"));
     assert_eq!(fur_creek.label, "Furnace Creek Resort (Demo)".to_owned());
     let raw_fur_creek = wikibase.get_entity(&fur_creek.id);
-    let location = &raw_fur_creek.properties[&properties.coordinate_location];
+    let location = &raw_fur_creek.properties[&properties.coordinate_location][0];
     match location {
         PropertyValue::Coord {
             latitude,
@@ -250,6 +250,27 @@ fn simple_test() {
         }
         _ => panic!("bad format"),
     }
+    // we check that the stop "STAGECOACH" has correclty been associated to 2 routes
+    let stage_coach =
+        find_by_gtfs_id("STAGECOACH").expect(&format!("impossible to find STAGECOACH"));
+    assert_eq!(
+        stage_coach.label,
+        "Stagecoach Hotel & Casino (Demo)".to_owned()
+    );
+    let raw_stage_coach = wikibase.get_entity(&stage_coach.id);
+    let part_of = &raw_stage_coach.properties[&properties.part_of];
+    assert_eq!(part_of.len(), 2);
+    let labels = part_of
+        .into_iter()
+        .map(|r| wikibase.get_entity(r).label)
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        labels,
+        btreeset![
+            "Bus Stagecoach - Airport Shuttle (bob the bus mapper)".to_owned(),
+            "Bus City (bob the bus mapper)".to_owned()
+        ]
+    );
 
     // we reimport the gtfs
     import_gtfs(&docker, &producer_id);
@@ -315,9 +336,8 @@ fn simple_test() {
     let fur_creek_res =
         find_by_gtfs_id("FUR_CREEK_RES").expect(&format!("impossible to find FUR_CREEK_RES"));
     let bullfrog_details = wikibase.get_entity(&bullfrog.id);
-    println!("props: {:#?}", bullfrog_details.properties);
     assert_eq!(
-        bullfrog_details.properties[&wikibase.properties().part_of].value(),
+        bullfrog_details.properties[&wikibase.properties().part_of][0].value(),
         fur_creek_res.id
     );
 
