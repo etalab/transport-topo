@@ -4,6 +4,7 @@ use crate::topo_writer::TopoWriter;
 use anyhow::Context;
 use anyhow::Error;
 use log::info;
+use std::collections::{HashMap, HashSet};
 
 pub struct GtfsImporter {
     pub writer: TopoWriter,
@@ -26,35 +27,33 @@ impl GtfsImporter {
         producer_id: &str,
         producer_name: &str,
     ) -> Result<(), anyhow::Error> {
-        let gtfs = gtfs_structures::RawGtfs::new(gtfs_filename).map_err(|e| e.compat())?;
+        let raw_gtfs = gtfs_structures::RawGtfs::new(gtfs_filename).map_err(|e| e.compat())?;
 
         log::info!("import gtfs version {}", crate::GIT_VERSION);
         let data_source_id =
             self.writer
-                .insert_data_source(&gtfs.sha256, &producer_id, gtfs_filename)?;
+                .insert_data_source(&raw_gtfs.sha256, &producer_id, gtfs_filename)?;
 
-        let routes = gtfs.routes.map_err(|e| e.compat())?;
+        let gtfs = gtfs_structures::Gtfs::try_from(raw_gtfs).map_err(|e| e.compat())?;
+
         let route_mapping =
-            self.import_routes(&routes, &data_source_id, producer_id, producer_name)?;
-        let stops = gtfs.stops.map_err(|e| e.compat())?;
-        let stop_mapping = self.import_stops(&stops, &data_source_id, producer_id)?;
-        self.insert_stop_relations(&stops, &stop_mapping)?;
-        let trips = gtfs.trips.map_err(|e| e.compat())?;
-        let stop_times = gtfs.stop_times.map_err(|e| e.compat())?;
-        self.insert_stop_route_relations(&trips, &stop_times, &stop_mapping, &route_mapping)?;
+            self.import_routes(&gtfs.routes, &data_source_id, producer_id, producer_name)?;
+        let stop_mapping = self.import_stops(&gtfs.stops, &data_source_id, producer_id)?;
+        self.insert_stop_relations(&gtfs.stops, &stop_mapping)?;
+        self.insert_stop_route_relations(&gtfs.trips, &stop_mapping, &route_mapping)?;
 
         Ok(())
     }
 
     pub fn import_routes(
         &self,
-        routes: &[gtfs_structures::Route],
+        routes: &HashMap<String, gtfs_structures::Route>,
         data_source_id: &str,
         producer_id: &str,
         producer_name: &str,
     ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
         routes
-            .iter()
+            .values()
             .map(|route| {
                 let r = self.query.find_route(&producer_id, &route.id)?;
                 match r.as_slice() {
@@ -87,12 +86,12 @@ impl GtfsImporter {
 
     pub fn import_stops(
         &self,
-        stops: &[gtfs_structures::Stop],
+        stops: &HashMap<String, std::sync::Arc<gtfs_structures::Stop>>,
         data_source_id: &str,
         producer_id: &str,
     ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
         stops
-            .iter()
+            .values()
             .map(|stop| {
                 let s = self.query.find_stop(&producer_id, &stop)?;
                 match s.as_slice() {
@@ -123,10 +122,10 @@ impl GtfsImporter {
 
     pub fn insert_stop_relations(
         &self,
-        stops: &[gtfs_structures::Stop],
+        stops: &HashMap<String, std::sync::Arc<gtfs_structures::Stop>>,
         id_mapping: &std::collections::HashMap<String, String>,
     ) -> Result<(), anyhow::Error> {
-        for stop in stops {
+        for stop in stops.values() {
             if let Some(parent_gtfs_id) = &stop.parent_station {
                 let parent_wikibase_id = match id_mapping.get(parent_gtfs_id) {
                     Some(id) => id,
@@ -156,17 +155,32 @@ impl GtfsImporter {
 
     pub fn insert_stop_route_relations(
         &self,
-        trips: &[gtfs_structures::RawTrip],
-        stop_times: &[gtfs_structures::RawStopTime],
+        trips: &HashMap<String, gtfs_structures::Trip>,
         stop_mapping: &std::collections::HashMap<String, String>,
         route_mapping: &std::collections::HashMap<String, String>,
     ) -> Result<(), anyhow::Error> {
-        for (route_gtfs_id, route_topo_id) in route_mapping {
-            for stop_gtfs_id in stops_of_route(&route_gtfs_id, trips, stop_times) {
-                let stop_topo_id = match stop_mapping.get(&stop_gtfs_id) {
+        let mut stops_by_routes: HashMap<String, HashSet<String>> = HashMap::new();
+        for trip in trips.values() {
+            let stops = stops_by_routes
+                .entry(trip.route_id.clone())
+                .or_insert_with(HashSet::new);
+            for s in &trip.stop_times {
+                stops.insert(s.stop.id.clone());
+            }
+        }
+        for (route_id, stops) in stops_by_routes.iter() {
+            let route_topo_id = match route_mapping.get(route_id) {
+                Some(id) => id,
+                None => {
+                    log::warn!("Could not find wikibase id for gtfs route id: {}", route_id);
+                    continue;
+                }
+            };
+            for stop_id in stops.iter() {
+                let stop_topo_id = match stop_mapping.get(stop_id) {
                     Some(id) => id,
                     None => {
-                        log::warn!("Could not find wikibase id for gtfs id: {}", stop_gtfs_id);
+                        log::warn!("Could not find wikibase id for gtfs id: {}", stop_id);
                         continue;
                     }
                 };
@@ -178,23 +192,7 @@ impl GtfsImporter {
                 self.writer.client.add_claims(stop_topo_id, vec![claim])?;
             }
         }
+
         Ok(())
     }
-}
-
-pub fn stops_of_route(
-    route_id: &str,
-    trips: &[gtfs_structures::RawTrip],
-    stop_times: &[gtfs_structures::RawStopTime],
-) -> std::collections::HashSet<String> {
-    let mut result = std::collections::HashSet::new();
-    for trip in trips.iter().filter(|trip| trip.route_id == route_id) {
-        for stop_time in stop_times
-            .iter()
-            .filter(|stop_time| stop_time.trip_id == trip.id)
-        {
-            result.insert(stop_time.stop_id.to_owned());
-        }
-    }
-    result
 }
