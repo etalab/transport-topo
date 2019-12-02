@@ -34,7 +34,8 @@ impl GtfsImporter {
                 .insert_data_source(&gtfs.sha256, &producer_id, gtfs_filename)?;
 
         let routes = gtfs.routes.map_err(|e| e.compat())?;
-        let route_mapping = self.import_routes(&routes, &data_source_id, producer_id, producer_name)?;
+        let route_mapping =
+            self.import_routes(&routes, &data_source_id, producer_id, producer_name)?;
         let stops = gtfs.stops.map_err(|e| e.compat())?;
         let stop_mapping = self.import_stops(&stops, &data_source_id, producer_id)?;
         self.insert_stop_relations(&stops, &stop_mapping)?;
@@ -187,14 +188,13 @@ pub fn stops_of_route(
     stop_times: &[gtfs_structures::RawStopTime],
 ) -> std::collections::HashSet<String> {
     let mut result = std::collections::HashSet::new();
-        for trip in trips.iter().filter(|trip| trip.route_id == route_id) {
-            for stop_time in stop_times
-                .iter()
-                .filter(|stop_time| stop_time.trip_id == trip.id)
-            {
-                result.insert(stop_time.stop_id.to_owned());
-            }
-
+    for trip in trips.iter().filter(|trip| trip.route_id == route_id) {
+        for stop_time in stop_times
+            .iter()
+            .filter(|stop_time| stop_time.trip_id == trip.id)
+        {
+            result.insert(stop_time.stop_id.to_owned());
+        }
     }
     result
 }
