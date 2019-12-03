@@ -56,8 +56,8 @@ impl GtfsImporter {
             .values()
             .map(|route| {
                 let r = self.query.find_route(&producer_id, &route.id)?;
-                match r.as_slice() {
-                    [] => {
+                match r {
+                    None => {
                         info!(
                             "Route “{}” ({}) does not exist, inserting",
                             route.long_name, route.short_name
@@ -67,18 +67,13 @@ impl GtfsImporter {
                                 .insert_route(&route, &data_source_id, producer_name)?;
                         Ok((route.id.to_owned(), wikibase_id))
                     }
-                    [e] => {
+                    Some(route_id) => {
                         info!(
                             "Route “{}” ({}) already exists with id {}, skipping",
-                            route.long_name, route.short_name, e["route"]
+                            route.long_name, route.short_name, route_id
                         );
-                        Ok((route.id.to_owned(), e["route"].to_owned()))
+                        Ok((route.id.to_owned(), route_id.to_owned()))
                     }
-                    _ => Err(anyhow::anyhow!(
-                        "Route “{}” ({}) exists many times. Something is not right",
-                        route.long_name,
-                        route.short_name
-                    )),
                 }
             })
             .collect()
@@ -94,8 +89,8 @@ impl GtfsImporter {
             .values()
             .map(|stop| {
                 let s = self.query.find_stop(&producer_id, &stop)?;
-                match s.as_slice() {
-                    [] => {
+                match s {
+                    None => {
                         info!(
                             "Stop “{}” ({}) does not exist, inserting",
                             stop.name, stop.id
@@ -103,18 +98,13 @@ impl GtfsImporter {
                         let wikibase_id = self.writer.insert_stop(&stop, &data_source_id)?;
                         Ok((stop.id.to_owned(), wikibase_id))
                     }
-                    [e] => {
+                    Some(stop_id) => {
                         info!(
                             "Stop “{}” ({}) already exists with id {}, skipping",
-                            stop.name, stop.id, e["stop"]
+                            stop.name, stop.id, stop_id
                         );
-                        Ok((stop.id.to_owned(), e["stop"].to_owned()))
+                        Ok((stop.id.to_owned(), stop_id.to_owned()))
                     }
-                    _ => Err(anyhow::anyhow!(
-                        "Stop “{}” ({}) exists many times. Something is not right",
-                        stop.name,
-                        stop.id
-                    )),
                 }
             })
             .collect()
