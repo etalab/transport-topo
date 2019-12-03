@@ -237,17 +237,38 @@ impl ApiClient {
         entity_id: &str,
         claims: Vec<Option<serde_json::Value>>,
     ) -> Result<(), ApiError> {
+        self.update_object_claims(entity_id, claims, false)
+    }
+
+    pub fn override_object_claims(
+        &self,
+        entity_id: &str,
+        claims: Vec<Option<serde_json::Value>>,
+    ) -> Result<(), ApiError> {
+        self.update_object_claims(entity_id, claims, true)
+    }
+
+    fn update_object_claims(
+        &self,
+        entity_id: &str,
+        claims: Vec<Option<serde_json::Value>>,
+        override_claims: bool,
+    ) -> Result<(), ApiError> {
         let claims: Vec<_> = claims.into_iter().filter_map(|v| v).collect();
         let claims = serde_json::to_string(&json!({ "claims": claims }))?;
         log::trace!("claims: {}", claims);
+        let mut params = vec![
+            ("action", "wbeditentity"),
+            ("id", entity_id),
+            ("format", "json"),
+        ];
+        if override_claims {
+            params.push(("clear", "true"));
+        }
         let mut res = self
             .client
             .post(&self.endpoint)
-            .query(&[
-                ("action", "wbeditentity"),
-                ("id", entity_id),
-                ("format", "json"),
-            ])
+            .query(&params)
             .form(&[("token", &self.token), ("data", &claims)])
             .send()?
             .error_for_status()?;

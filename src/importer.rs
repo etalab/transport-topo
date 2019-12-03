@@ -26,6 +26,7 @@ impl GtfsImporter {
         gtfs_filename: &str,
         producer_id: &str,
         producer_name: &str,
+        override_existing: bool,
     ) -> Result<(), anyhow::Error> {
         let raw_gtfs = gtfs_structures::RawGtfs::new(gtfs_filename).map_err(|e| e.compat())?;
 
@@ -38,7 +39,8 @@ impl GtfsImporter {
 
         let route_mapping =
             self.import_routes(&gtfs.routes, &data_source_id, producer_id, producer_name)?;
-        let stop_mapping = self.import_stops(&gtfs.stops, &data_source_id, producer_id)?;
+        let stop_mapping =
+            self.import_stops(&gtfs.stops, &data_source_id, producer_id, override_existing)?;
         self.insert_stop_relations(&gtfs.stops, &stop_mapping)?;
         self.insert_stop_route_relations(&gtfs.trips, &stop_mapping, &route_mapping)?;
 
@@ -84,6 +86,7 @@ impl GtfsImporter {
         stops: &HashMap<String, std::sync::Arc<gtfs_structures::Stop>>,
         data_source_id: &str,
         producer_id: &str,
+        override_existing: bool,
     ) -> Result<std::collections::HashMap<String, String>, anyhow::Error> {
         stops
             .values()
@@ -99,10 +102,18 @@ impl GtfsImporter {
                         Ok((stop.id.to_owned(), wikibase_id))
                     }
                     Some(stop_id) => {
-                        info!(
-                            "Stop “{}” ({}) already exists with id {}, skipping",
+                        if override_existing {
+                            info!(
+                            "Stop “{}” ({}) already exists with id {}, updating it with new claims",
                             stop.name, stop.id, stop_id
                         );
+                            self.writer.update_stop(&stop_id, stop, data_source_id)?;
+                        } else {
+                            info!(
+                                "Stop “{}” ({}) already exists with id {}, skipping",
+                                stop.name, stop.id, stop_id
+                            );
+                        }
                         Ok((stop.id.to_owned(), stop_id.to_owned()))
                     }
                 }
@@ -149,6 +160,7 @@ impl GtfsImporter {
         stop_mapping: &std::collections::HashMap<String, String>,
         route_mapping: &std::collections::HashMap<String, String>,
     ) -> Result<(), anyhow::Error> {
+        log::info!("inserting stop/routes relations");
         let mut stops_by_routes: HashMap<String, HashSet<String>> = HashMap::new();
         for trip in trips.values() {
             let stops = stops_by_routes

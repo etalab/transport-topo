@@ -26,6 +26,12 @@ struct Opt {
     /// Endpoint of the sparql query serive
     #[structopt(short, long, default_value = "http://localhost:8989/bigdata/sparql")]
     sparql: String,
+
+    /// Override existing objects
+    /// This is to be used when the importing tool has been updated
+    /// and you want to force the update of the already inserted items
+    #[structopt(long)]
+    override_existing: bool,
 }
 
 fn main() {
@@ -43,6 +49,11 @@ fn main() {
     log::info!("Found the producer “{}”", &producer_label);
     log::info!("Starting the importation of lines");
     importer
-        .import_gtfs(&opt.gtfs_filename, &opt.producer, &producer_label)
+        .import_gtfs(
+            &opt.gtfs_filename,
+            &opt.producer,
+            &producer_label,
+            opt.override_existing,
+        )
         .expect("unable to import");
 }
