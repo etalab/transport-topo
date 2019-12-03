@@ -1,3 +1,4 @@
+use crate::clients::ApiError;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -72,6 +73,29 @@ pub struct TokenResponse {
 pub struct ApiResponse {
     #[serde(flatten)]
     pub content: ApiResponseContent,
+}
+
+impl ApiResponse {
+    /// the wikibase api can return 200 status code but containing an error
+    /// this checks that the api response is not an error
+    /// and if it is convert return an error
+    pub fn error_for_status(self) -> Result<ApiResponse, ApiError> {
+        match self.content {
+            ApiResponseContent::Entity(_) => Ok(self),
+            ApiResponseContent::Error(e) => {
+                log::info!(
+                    "api error '{}': {}, message: {:?}",
+                    &e.code,
+                    &e.info,
+                    &e.messages
+                );
+                Err(ApiError::GenericError(format!(
+                    "Api error '{}': {} ",
+                    &e.code, &e.info
+                )))
+            }
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
