@@ -5,6 +5,7 @@ version: '3'
 
 services:
   wikibase:
+    image: antoinede/linked-wiki
     ports:
      - "8181:80"
     volumes:
