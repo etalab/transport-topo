@@ -1,7 +1,6 @@
 use crate::clients::sparql_client::{read_id_from_url, SparqlClient};
 use crate::known_entities::{EntitiesId, Items, Properties};
 use anyhow::Context;
-use std::collections::HashMap;
 use thiserror::Error;
 
 pub struct TopoQuery {
@@ -39,17 +38,10 @@ impl TopoQuery {
         &self,
         producer_id: &str,
         gtfs_id: &str,
-    ) -> Result<Vec<HashMap<String, String>>, QueryError> {
+    ) -> Result<Option<String>, QueryError> {
         log::trace!("Finding route {} of producer {}", gtfs_id, producer_id);
-        Ok(self.client.sparql(
-            &[
-                "?route",
-                "?routeLabel",
-                "?route_short_name",
-                "?route_long_name",
-                "?physical_mode",
-                "?gtfs_id",
-            ],
+        let items = self.client.sparql(
+            &["?route", "?routeLabel", "?gtfs_id"],
             &format!(
                 "?route wdt:{instance_of} wd:{route}.
                  ?route wdt:{gtfs_id_prop} \"{gtfs_id}\".
@@ -64,21 +56,30 @@ impl TopoQuery {
                 gtfs_id = gtfs_id,
                 producer_id = producer_id,
             ),
-        )?)
+        )?;
+
+        match items.as_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.get("route").and_then(|u| read_id_from_url(u))),
+            _ => Err(QueryError::Duplicate(format!(
+                "Route “{}” exists many times. Something is not right",
+                gtfs_id
+            ))),
+        }
     }
 
     pub fn find_stop(
         &self,
         producer_id: &str,
         stop: &gtfs_structures::Stop,
-    ) -> Result<Vec<HashMap<String, String>>, QueryError> {
+    ) -> Result<Option<String>, QueryError> {
         log::trace!(
             "Finding stop {} {} of producer {}",
             stop.name,
             stop.id,
             producer_id
         );
-        Ok(self.client.sparql(
+        let items = self.client.sparql(
             &["?stop", "?stopLabel", "?stopName", "?gtfs_id"],
             &format!(
                 "?stop wdt:{instance_of} wd:{stop_type}.
@@ -95,7 +96,16 @@ impl TopoQuery {
                 gtfs_id = stop.id,
                 producer_id = producer_id,
             ),
-        )?)
+        )?;
+
+        match items.as_slice() {
+            [] => Ok(None),
+            [item] => Ok(item.get("stop").and_then(|u| read_id_from_url(u))),
+            _ => Err(QueryError::Duplicate(format!(
+                "Stop “{}” exists many times. Something is not right",
+                stop.id
+            ))),
+        }
     }
 
     pub fn get_producer_label(&self, producer_id: &str) -> Result<Option<String>, QueryError> {

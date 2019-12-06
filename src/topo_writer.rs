@@ -82,12 +82,12 @@ impl TopoWriter {
             .context("impossible to insert route")
     }
 
-    pub fn insert_stop(
+    fn stop_claims(
         &self,
         stop: &gtfs_structures::Stop,
         data_source_id: &str,
-    ) -> Result<String, anyhow::Error> {
-        let claims = vec![
+    ) -> Vec<Option<serde_json::Value>> {
+        vec![
             claim_item(
                 &self.known_entities.properties.instance_of,
                 &self.known_entities.location_type(stop),
@@ -100,10 +100,31 @@ impl TopoWriter {
                 stop.longitude,
                 stop.latitude,
             ),
-        ];
+        ]
+    }
+
+    pub fn insert_stop(
+        &self,
+        stop: &gtfs_structures::Stop,
+        data_source_id: &str,
+    ) -> Result<String, anyhow::Error> {
+        let claims = self.stop_claims(stop, data_source_id);
 
         self.client
             .create_object(ObjectType::Item, &stop.name, claims)
             .context("impossible to insert stop")
+    }
+
+    pub fn update_stop(
+        &self,
+        stop_id: &str,
+        stop: &gtfs_structures::Stop,
+        data_source_id: &str,
+    ) -> Result<(), anyhow::Error> {
+        let claims = self.stop_claims(stop, data_source_id);
+
+        self.client
+            .override_object_claims(stop_id, claims)
+            .context("impossible to update stop")
     }
 }

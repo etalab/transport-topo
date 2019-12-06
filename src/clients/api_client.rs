@@ -1,10 +1,10 @@
 use crate::clients::api_structures::*;
+use crate::clients::ApiError;
 use crate::entity;
 use anyhow::anyhow;
 use regex::Regex;
 use serde_json::json;
 use std::collections::HashMap;
-use thiserror::Error;
 
 const WIKIBASE_LABEL_CONFLICT: &str = "wikibase-validator-label-conflict";
 
@@ -12,22 +12,6 @@ lazy_static::lazy_static! {
     // the message in the api response is in the form "[[Property:P1|P1]]"
     // and in this example we want to extract "P1"
     static ref LABEL_CONFLICT_REGEX: Regex = Regex::new(r#"\[\[.+\|(.+)\]\]"#).unwrap();
-}
-
-#[derive(Debug, Error)]
-pub enum ApiError {
-    #[error("{label} already exists, id = {id}")]
-    PropertyAlreadyExists { label: String, id: String },
-    #[error("Several items with label {0}")]
-    TooManyItems(String),
-    #[error("Cannot find entiy {0}")]
-    EntityNotFound(String),
-    #[error("error: {0}")]
-    ReqwestError(#[from] reqwest::Error),
-    #[error("error: {0}")]
-    InvalidJsonError(#[from] serde_json::Error),
-    #[error("error: {0}")]
-    GenericError(String),
 }
 
 pub enum PropertyDataType {
@@ -176,7 +160,8 @@ impl ApiClient {
                 ("format", "json"),
             ])
             .form(&[("token", &self.token), ("data", &claims)])
-            .send()?;
+            .send()?
+            .error_for_status()?;
 
         log::trace!("Response headers: {:#?}", res);
         let body = res.text()?;
@@ -238,6 +223,7 @@ impl ApiClient {
             .get()
             .query(&[("action", "wbgetentities"), ("ids", id), ("format", "json")])
             .send()?
+            .error_for_status()?
             .json::<serde_json::Value>()?;
 
         res.pointer(&format!("/entities/{}/labels/en/value", id))
@@ -251,24 +237,46 @@ impl ApiClient {
         entity_id: &str,
         claims: Vec<Option<serde_json::Value>>,
     ) -> Result<(), ApiError> {
+        self.update_object_claims(entity_id, claims, false)
+    }
+
+    pub fn override_object_claims(
+        &self,
+        entity_id: &str,
+        claims: Vec<Option<serde_json::Value>>,
+    ) -> Result<(), ApiError> {
+        self.update_object_claims(entity_id, claims, true)
+    }
+
+    fn update_object_claims(
+        &self,
+        entity_id: &str,
+        claims: Vec<Option<serde_json::Value>>,
+        override_claims: bool,
+    ) -> Result<(), ApiError> {
         let claims: Vec<_> = claims.into_iter().filter_map(|v| v).collect();
         let claims = serde_json::to_string(&json!({ "claims": claims }))?;
         log::trace!("claims: {}", claims);
+        let mut params = vec![
+            ("action", "wbeditentity"),
+            ("id", entity_id),
+            ("format", "json"),
+        ];
+        if override_claims {
+            params.push(("clear", "true"));
+        }
         let mut res = self
             .client
             .post(&self.endpoint)
-            .query(&[
-                ("action", "wbeditentity"),
-                ("id", entity_id),
-                ("format", "json"),
-            ])
+            .query(&params)
             .form(&[("token", &self.token), ("data", &claims)])
-            .send()?;
+            .send()?
+            .error_for_status()?;
 
         log::trace!("Response headers: {:#?}", res);
         let body = res.text()?;
         log::trace!("Response body: {:#?}", body);
-        serde_json::from_str::<ApiResponse>(&body)?;
+        serde_json::from_str::<ApiResponse>(&body)?.error_for_status()?;
         Ok(())
     }
 }
