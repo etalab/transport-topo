@@ -136,3 +136,56 @@ Once this is done, you can import the GTFS.
 So to import the GTFS run:
 
     cargo run --release --bin import-gtfs -- --api http://localhost:8181/api.php --sparql http://localhost:8989/bigdata/sparql --producer <id of the producer> -i <path to gtfs.zip>
+
+## Using the database
+
+All datasets from https://transport.data.gouv.fr/ have been loaded in https://topo.transport.data.gouv.fr/.
+
+A graphical interface to test can be found [here](https://query.topo.transport.data.gouv.fr/). The queries can also be done directly on the sparql end point: `https://sparql.topo.transport.data.gouv.fr/bigdata/sparql?format=json&query=<query>`
+
+### Example queries
+
+You can query all the stops around a point and the line that passes though eacg stops with [this query](https://query.topo.transport.data.gouv.fr/#select%20%3Fplace%20%3FgtfsName%20%3FgtfsId%20%3Flocation%20%3FlineLabel%20%3FmodeLabel%0AWHERE%20%7B%0A%20%20%3Fplace%20wdt%3AP7%20%3FgtfsName.%0A%20%20%3Fplace%20wdt%3AP2%20%3FgtfsId.%0A%20%20%3Fplace%20wdt%3AP15%20%3Fline.%0A%20%20%3Fline%20wdt%3AP8%20%3Fmode.%0A%20%20%0A%20%20SERVICE%20wikibase%3Aaround%20%7B%0A%20%20%20%20%3Fplace%20wdt%3AP50%20%3Flocation.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Acenter%20%22Point%28-1.0253558%2045.6309576%29%22%5E%5Egeo%3AwktLiteral.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Aradius%20%220.5%22%20.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Adistance%20%3Fdist.%0A%20%20%7D%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%20%0A%7D) (or with [curl](https://sparql.topo.transport.data.gouv.fr/bigdata/sparql?format=json&query=select%20%3Fplace%20%3FgtfsName%20%3FgtfsId%20%3Flocation%20%3FlineLabel%20%3FmodeLabel%0AWHERE%20%7B%0A%20%20%3Fplace%20wdt%3AP7%20%3FgtfsName.%0A%20%20%3Fplace%20wdt%3AP2%20%3FgtfsId.%0A%20%20%3Fplace%20wdt%3AP15%20%3Fline.%0A%20%20%3Fline%20wdt%3AP8%20%3Fmode.%0A%20%20%0A%20%20SERVICE%20wikibase%3Aaround%20%7B%0A%20%20%20%20%3Fplace%20wdt%3AP50%20%3Flocation.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Acenter%20%22Point%28-1.0253558%2045.6309576%29%22%5E%5Egeo%3AwktLiteral.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Aradius%20%220.5%22%20.%0A%20%20%20%20bd%3AserviceParam%20wikibase%3Adistance%20%3Fdist.%0A%20%20%7D%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%20%0A%7D)):
+
+```sparql
+select ?place ?gtfsName ?gtfsId ?location ?lineLabel ?modeLabel
+WHERE {
+  ?place wdt:P7 ?gtfsName.
+  ?place wdt:P2 ?gtfsId.
+  ?place wdt:P15 ?line.
+  ?line wdt:P8 ?mode.
+
+  SERVICE wikibase:around {
+    ?place wdt:P50 ?location.
+    bd:serviceParam wikibase:center "Point(-1.0253558 45.6309576)"^^geo:wktLiteral.
+    bd:serviceParam wikibase:radius "0.5" .
+    bd:serviceParam wikibase:distance ?dist.
+  }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+```
+
+You can query all the TOPO 'hardcoded' relations (those can be items or properties) with [this query](https://query.topo.transport.data.gouv.fr/#select%20%3Fo%20%3FtopoProp%0AWHERE%20%7B%0A%20%20%3Fo%20wdt%3AP1%20%3FtopoProp.%20%23%20wdt%3AP1%20is%20the%20property%20used%20to%20mark%20all%20properties%20%2F%20items%20used%20by%20TOPO%0A%7D):
+```sparql
+select ?o ?topoProp
+WHERE {
+  ?o wdt:P1 ?topoProp. # wdt:P1 is the property used to mark all properties / items used by TOPO
+}
+```
+
+You can do a bulk query to get all stops with their routes by doing a paginated query (be careful the queries can become quite slow) with [this query](https://query.topo.transport.data.gouv.fr/#select%20%3Fplace%20%3FgtfsName%20%3FgtfsId%20%3Flocation%20%3FlineLabel%20%3FmodeLabel%0AWHERE%20%7B%0A%20%20%3Fplace%20wdt%3AP7%20%3FgtfsName.%0A%20%20%3Fplace%20wdt%3AP2%20%3FgtfsId.%0A%20%20%3Fplace%20wdt%3AP15%20%3Fline.%0A%20%20%3Fline%20wdt%3AP8%20%3Fmode.%0A%20%20%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%20%0A%7D%0AORDER%20BY%20%3FgtfsName%0ALIMIT%201000%0AOFFSET%20500) (or just [with curl](https://sparql.topo.transport.data.gouv.fr/bigdata/sparql?format=json&query=select%20%3Fplace%20%3FgtfsName%20%3FgtfsId%20%3Flocation%20%3FlineLabel%20%3FmodeLabel%0AWHERE%20%7B%0A%20%20%3Fplace%20wdt%3AP7%20%3FgtfsName.%0A%20%20%3Fplace%20wdt%3AP2%20%3FgtfsId.%0A%20%20%3Fplace%20wdt%3AP15%20%3Fline.%0A%20%20%3Fline%20wdt%3AP8%20%3Fmode.%0A%20%20%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%20%0A%7D%0AORDER%20BY%20%3FgtfsName%0ALIMIT%20100%0AOFFSET%2050)):
+
+```sparql
+select ?place ?gtfsName ?gtfsId ?location ?lineLabel ?modeLabel
+WHERE {
+  ?place wdt:P7 ?gtfsName.
+  ?place wdt:P2 ?gtfsId.
+  ?place wdt:P15 ?line.
+  ?line wdt:P8 ?mode.
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+ORDER BY ?gtfsName
+LIMIT 1000
+OFFSET 500
+```
